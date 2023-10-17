@@ -1,0 +1,132 @@
+package presenters
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/pkg/errors"
+	"log/slog"
+	"multi-proving-client/internal/common"
+	"multi-proving-client/internal/connectors"
+	"multi-proving-client/internal/logic"
+)
+
+type Listener struct {
+	pubsub               *connectors.PubSub
+	votingHandler        *logic.VotingHandler
+	requestsHandler      *logic.ProvingRequestsHandler
+	statusUpdatesHandler *logic.StatusUpdatesHandler
+}
+
+func NewListener(pubsub *connectors.PubSub) *Listener {
+	return &Listener{
+		pubsub: pubsub,
+	}
+}
+
+func (l *Listener) Listen(ctx context.Context) error {
+	funcs := []func(context.Context) error{
+		l.ListenStateUpdates,
+		l.ListenProvingRequests,
+		l.ListenVoting,
+	}
+
+	errs := make(chan error, len(funcs))
+	for _, f := range funcs {
+		function := f
+		go func(function func(context.Context) error) {
+			errs <- function(ctx)
+		}(function)
+	}
+
+	cnt := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case err := <-errs:
+			if err != nil {
+				return err
+			} else {
+				cnt++
+				if cnt == len(funcs) {
+					return nil
+				}
+			}
+		}
+	}
+}
+
+func (l *Listener) ListenStateUpdates(ctx context.Context) error {
+	subscription, err := l.pubsub.Subscribe(common.GlobalTopic)
+	if err != nil {
+		return errors.Wrap(err, "error subscribing to state updates topic")
+	}
+
+	for {
+		pubsubMsg, err := subscription.Next(ctx)
+		if err != nil {
+			slog.Error("error getting next message from subscription", err)
+
+			continue
+		}
+
+		var msg common.StatusMessage
+		if err := json.Unmarshal(pubsubMsg.Data, &msg); err != nil {
+			slog.Error("error unmarshalling state update message", err)
+
+			continue
+		}
+
+		go l.statusUpdatesHandler.Handle(pubsubMsg.ReceivedFrom, msg)
+	}
+}
+
+func (l *Listener) ListenProvingRequests(ctx context.Context) error {
+	subscription, err := l.pubsub.Subscribe(common.RequestsTopic)
+	if err != nil {
+		return errors.Wrap(err, "error subscribing to requests topic")
+	}
+
+	for {
+		pubsubMsg, err := subscription.Next(ctx)
+		if err != nil {
+			slog.Error("error getting next message from subscription", err)
+
+			continue
+		}
+
+		var msg common.ProvingRequestMessage
+		if err := json.Unmarshal(pubsubMsg.Data, &msg); err != nil {
+			slog.Error("error unmarshalling proving request message", err)
+
+			continue
+		}
+
+		go l.requestsHandler.Handle(pubsubMsg.ReceivedFrom, msg)
+	}
+}
+
+func (l *Listener) ListenVoting(ctx context.Context) error {
+	subscription, err := l.pubsub.Subscribe(common.VotingTopic)
+	if err != nil {
+		return errors.Wrap(err, "error subscribing to voting topic")
+	}
+
+	for {
+		pubsubMsg, err := subscription.Next(ctx)
+		if err != nil {
+			slog.Error("error getting next message from subscription", err)
+
+			continue
+		}
+
+		var msg common.VotingMessage
+		if err := json.Unmarshal(pubsubMsg.Data, &msg); err != nil {
+			slog.Error("error unmarshalling voting message", err)
+
+			continue
+		}
+
+		go l.votingHandler.Handle(ctx, pubsubMsg.ReceivedFrom, msg)
+	}
+}
