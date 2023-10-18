@@ -2,22 +2,24 @@ package connectors
 
 import (
 	"fmt"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
-	"multi-proving-client/internal/common"
+	"github.com/pkg/errors"
 	"os"
 )
 
+//nolint:ireturn
 func NewHost(cfg *common.Config) (host.Host, error) {
 	privBytes, err := os.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error reading private key")
 	}
 
 	priv, err := crypto.UnmarshalEd25519PrivateKey(privBytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error unmarshalling private key")
 	}
 
 	h, err := libp2p.New(
@@ -25,15 +27,15 @@ func NewHost(cfg *common.Config) (host.Host, error) {
 		libp2p.Identity(priv),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error creating a new host")
 	}
 
-	//fmt.Printf("host ID %s\n", host.ID().String())
-	//fmt.Printf("following are the assigned addresses\n")
-	//for _, addr := range host.Addrs() {
-	//	fmt.Printf("%s\n", addr.String())
-	//}
-	//fmt.Printf("\n")
+	// fmt.Printf("host ID %s\n", host.ID().String())
+	// fmt.Printf("following are the assigned addresses\n")
+	// for _, addr := range host.Addrs() {
+	// 	fmt.Printf("%s\n", addr.String())
+	// }
+	// fmt.Printf("\n")
 
-	return h, err
+	return h, nil
 }

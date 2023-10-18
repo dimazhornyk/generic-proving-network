@@ -1,4 +1,4 @@
-module multi-proving-client
+module github.com/dimazhornyk/generic-proving-network
 
 go 1.21
 
@@ -12,6 +12,8 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.9.4-0.20230914081111-d13e24ddc9f2
 	github.com/multiformats/go-multiaddr v0.12.0
 	github.com/pkg/errors v0.9.1
+	go.uber.org/fx v1.20.0
+	golang.org/x/sync v0.3.0
 )
 
 require (
@@ -109,7 +111,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go.uber.org/dig v1.17.0 // indirect
-	go.uber.org/fx v1.20.0 // indirect
 	go.uber.org/mock v0.2.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
@@ -117,7 +118,6 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
-	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

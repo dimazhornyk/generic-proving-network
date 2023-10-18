@@ -2,15 +2,15 @@ package presenters
 
 import (
 	"context"
-	"multi-proving-client/internal/common"
-	"multi-proving-client/internal/logic"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 )
 
 type API struct {
-	service *logic.Service
+	service *logic.ServiceStruct
 }
 
-func NewAPI(service *logic.Service) *API {
+func NewAPI(service *logic.ServiceStruct) *API {
 	return &API{
 		service: service,
 	}

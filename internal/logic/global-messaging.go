@@ -2,9 +2,9 @@ package logic
 
 import (
 	"context"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"log/slog"
-	"multi-proving-client/internal/common"
-	"multi-proving-client/internal/connectors"
 	"time"
 )
 

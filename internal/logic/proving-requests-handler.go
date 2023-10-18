@@ -1,34 +1,107 @@
 package logic
 
 import (
+	"context"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
 	"time"
 )
 
 type ProvingRequestsHandler struct {
-	state *State
+	host    host.Host
+	state   *State
+	service *ServiceStruct
+	pubsub  *connectors.PubSub
 }
 
-func NewProvingRequestsHandler(state *State) *ProvingRequestsHandler {
+func NewProvingRequestsHandler(host host.Host, state *State, service *ServiceStruct, pubsub *connectors.PubSub) *ProvingRequestsHandler {
 	return &ProvingRequestsHandler{
-		state: state,
+		host:    host,
+		state:   state,
+		service: service,
+		pubsub:  pubsub,
 	}
 }
 
-func (h *ProvingRequestsHandler) Handle(peerID peer.ID, msg common.ProvingRequestMessage) {
+func (h *ProvingRequestsHandler) Handle(ctx context.Context, msg common.ProvingRequestMessage) {
 	if err := validateProvingRequest(msg); err != nil {
 		// TODO: if it is invalid - take punishing actions
-		slog.Error("invalid proving request", err)
+		slog.Error("invalid proving request", slog.String("err", err.Error()))
 
 		return
 	}
 
-	if err := h.state.SaveRequest(msg); err != nil {
-		slog.Error("error saving proving request", err)
+	proverID, err := h.selectProver(msg)
+	if err != nil {
+		slog.Error("error selecting prover", slog.String("err", err.Error()))
+
+		return
 	}
+	slog.Info("proving selection winner",
+		slog.String("winner", proverID.String()),
+		slog.String("requestID", msg.ID),
+	)
+
+	if err := h.state.SaveRequest(proverID, msg); err != nil {
+		slog.Error("error saving proving request", slog.String("err", err.Error()))
+
+		return
+	}
+
+	if err := h.voteProverSelection(ctx, msg.ID, proverID); err != nil {
+		slog.Error("error voting for prover selection", slog.String("err", err.Error()))
+
+		return
+	}
+
+	if proverID == h.host.ID() {
+		slog.Info("I am the selected node, starting proving...")
+
+		proof, err := h.service.ComputeProof(msg)
+		if err != nil {
+			slog.Error("error computing the proof", slog.String("err", err.Error()))
+
+			return
+		}
+
+		if err := h.submitProof(proof); err != nil {
+			slog.Error("error submitting proof", slog.String("err", err.Error()))
+		}
+	}
+}
+
+func (h *ProvingRequestsHandler) submitProof(proof []byte) error {
+	// TODO: implement
+	return nil
+}
+
+func (h *ProvingRequestsHandler) voteProverSelection(ctx context.Context, requestID common.RequestID, provingNodeID peer.ID) error {
+	msg := common.VotingMessage{
+		Type: common.VoteProverSelection,
+		Payload: common.ProverSelectionMessage{
+			RequestID: requestID,
+			PeerID:    provingNodeID,
+		},
+	}
+
+	if err := h.pubsub.Publish(ctx, common.VotingTopic, msg); err != nil {
+		return errors.Wrap(err, "error when publishing to voting topic")
+	}
+
+	return nil
+}
+
+func (h *ProvingRequestsHandler) selectProver(req common.ProvingRequestMessage) (peer.ID, error) {
+	peerID, err := h.service.SelectProvingNode(req.ConsumerName, req.Timestamp)
+	if err != nil {
+		return "", errors.Wrap(err, "error selecting proving node")
+	}
+
+	return peerID, nil
 }
 
 func validateProvingRequest(msg common.ProvingRequestMessage) error {

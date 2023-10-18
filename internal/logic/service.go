@@ -1,19 +1,27 @@
 package logic
 
 import (
+	"bytes"
 	"cmp"
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"multi-proving-client/internal/common"
-	"multi-proving-client/internal/connectors"
+	"io"
+	"net/http"
 	"slices"
 	"time"
 )
 
-type Service struct {
+const urlTemplate = "http://localhost:%s/prove"
+
+// TODO: rename to service after GoLand is fixed
+type ServiceStruct struct {
 	docker    *connectors.Docker
 	pubsub    *connectors.PubSub
 	host      host.Host
@@ -22,9 +30,9 @@ type Service struct {
 	consumers []common.Consumer
 }
 
-func NewService(cfg common.Config, docker *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, state State, host host.Host) *Service {
-	return &Service{
-		docker:    docker,
+func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, state State, host host.Host) *ServiceStruct {
+	return &ServiceStruct{
+		docker:    d,
 		pubsub:    pubsub,
 		nodes:     nodes,
 		state:     state,
@@ -33,19 +41,19 @@ func NewService(cfg common.Config, docker *connectors.Docker, pubsub *connectors
 	}
 }
 
-func (s Service) Start(ctx context.Context) error {
+func (s ServiceStruct) Start() error {
 	images := common.Map(s.consumers, func(c common.Consumer) string {
 		return c.Image
 	})
 
-	if err := s.preloadImages(images); err != nil {
-		return err
+	if err := s.docker.StartContainers(images); err != nil {
+		return errors.Wrap(err, "error starting containers")
 	}
 
 	return nil
 }
 
-func (s Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
+func (s ServiceStruct) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
 	msg := common.ProvingRequestMessage{
 		ID:              uuid.New().String(),
 		ConsumerName:    req.ConsumerName,
@@ -59,29 +67,11 @@ func (s Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]b
 		return nil, errors.Wrap(err, "error publishing the proving request")
 	}
 
-	// TODO think about delaying this so everyone has saved the request data
-	if err := s.StartSelectionVote(msg.ID); err != nil {
-		return nil, err
-	}
-
-	// TODO: wait till the proving end and respond (or make API async so client would poll for response)
+	// TODO: wait till the proving finalization and respond (or make API async so client would poll for response)
 	return nil, nil
 }
 
-func (s Service) StartSelectionVote(requestID common.RequestID) error {
-	msg := common.VotingMessage{
-		Type:    common.InitProverSelectionVoting,
-		Payload: requestID,
-	}
-
-	if err := s.pubsub.Publish(context.Background(), common.VotingTopic, msg); err != nil {
-		return errors.Wrap(err, "error publishing the message to start voting")
-	}
-
-	return nil
-}
-
-func (s Service) SelectProvingNode(consumerName string, requestTimestamp int64) (peer.ID, error) {
+func (s ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp int64) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
 		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) {
@@ -107,21 +97,45 @@ func (s Service) SelectProvingNode(consumerName string, requestTimestamp int64) 
 	return nodes[idx].PeerID, nil
 }
 
-func isNodeAppropriate(node common.NodeData, maxTimestamp int64) bool {
-	return node.Status == common.StatusIdle && node.AvailableSince < maxTimestamp
-}
-
-func (s Service) preloadImages(images []string) error {
-	for _, img := range images {
-		if err := s.docker.Pull(img); err != nil {
-			return errors.Wrap(err, "error preloading docker images")
+func (s ServiceStruct) ComputeProof(request common.ProvingRequestMessage) ([]byte, error) {
+	var image string
+	for _, consumer := range s.consumers {
+		if consumer.Name == request.ConsumerName {
+			image = consumer.Image
 		}
 	}
 
-	return nil
+	if image == "" {
+		return nil, errors.New("unknown consumer")
+	}
+
+	port, err := s.docker.GetContainerPort(image)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting container ID")
+	}
+
+	msg := common.ProverMessage{
+		RequestID: request.ID,
+		Data:      request.Data,
+	}
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error marshalling prover message")
+	}
+
+	resp, err := http.Post(fmt.Sprintf(urlTemplate, port), "application/json", bytes.NewReader(b))
+	if err != nil {
+		return nil, errors.Wrap(err, "error requesting the prover's container")
+	}
+
+	proof, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading the response body")
+	}
+
+	return proof, nil
 }
 
-func (s Service) GenerateProof(request common.ProvingRequestMessage) error {
-
-	return nil
+func isNodeAppropriate(node common.NodeData, maxTimestamp int64) bool {
+	return node.Status == common.StatusIdle && node.AvailableSince < maxTimestamp
 }

@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
+	"github.com/dimazhornyk/generic-proving-network/internal/presenters"
 	"go.uber.org/fx"
-	"multi-proving-client/internal/common"
-	"multi-proving-client/internal/connectors"
-	"multi-proving-client/internal/logic"
-	"multi-proving-client/internal/presenters"
 )
 
 func main() {
@@ -27,6 +27,9 @@ func buildApp() *fx.App {
 			connectors.NewHost,
 			logic.NewDHT,
 			logic.NewDiscovery,
+			logic.NewProvingRequestsHandler,
+			logic.NewVotingHandler,
+			logic.NewStatusUpdatesHandler,
 			connectors.NewPubSub,
 			logic.NewGlobalMessaging,
 			logic.NewNodesMap,
@@ -34,6 +37,10 @@ func buildApp() *fx.App {
 			logic.NewService,
 			presenters.NewAPI,
 			presenters.NewListener,
+			// handles proofs generation, important for service to start first because it has to pull docker images
+			fx.Invoke(func(ctx context.Context, service *logic.ServiceStruct) error {
+				return service.Start()
+			}),
 			// sends status updates
 			fx.Invoke(func(ctx context.Context, cfg *common.Config, messaging *logic.GlobalMessaging) error {
 				return messaging.Init(ctx, cfg.Consumers)
@@ -41,10 +48,6 @@ func buildApp() *fx.App {
 			// listens to other's messages
 			fx.Invoke(func(ctx context.Context, listener *presenters.Listener) error { // others listener
 				return listener.Listen(ctx)
-			}),
-			// handles proofs generation
-			fx.Invoke(func(ctx context.Context, service *logic.Service) error { // service
-				return service.Start(ctx)
 			}),
 		),
 	)

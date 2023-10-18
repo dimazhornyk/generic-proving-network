@@ -1,0 +1,34 @@
+run:
+  #  skip-dirs:
+  #    - internal/mocks
+  tests: false
+  allow-parallel-runners: true
+  timeout: 5m
+  modules-download-mode: readonly
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - golint
+    - exhaustivestruct
+    - nosnakecase
+    - ifshort
+    - varcheck
+    - deadcode
+    - structcheck
+    - interfacer
+    - scopelint
+    - gci
+    - godot
+    - gofumpt
+    - tagalign
+    - depguard
+    - exhaustruct
+    - tagliatelle
+    - varnamelen
+    - goimports
+  fast: false
+linters-settings:
+  govet:
+    disable:
+      - composites

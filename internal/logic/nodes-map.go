@@ -1,9 +1,9 @@
 package logic
 
 import (
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"multi-proving-client/internal/common"
 	"time"
 )
 

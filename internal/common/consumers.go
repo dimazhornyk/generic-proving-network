@@ -7,6 +7,7 @@ type Consumer struct {
 	Image string
 }
 
+//nolint:gochecknoglobals
 var consumers = []Consumer{
 	{
 		Name:  "zksync",
@@ -20,6 +21,7 @@ var consumers = []Consumer{
 
 func GetConsumers(list []string) []Consumer {
 	res := make([]Consumer, 0)
+
 	for _, c := range consumers {
 		if slices.Contains(list, c.Name) {
 			res = append(res, c)

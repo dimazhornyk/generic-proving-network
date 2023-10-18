@@ -17,31 +17,29 @@ func (s Status) String() string {
 }
 
 type StatusMessage struct {
-	Status  Status
-	Payload any
+	Status  Status `json:"status"`
+	Payload any    `json:"payload"`
 }
 
 type ProvingRequestMessage struct {
-	ID              RequestID
-	ConsumerName    string
-	ConsumerAddress string
-	Signature       []byte
-	Data            []byte
-	Timestamp       int64
+	ID              RequestID `json:"request_id"`
+	ConsumerName    string    `json:"consumer_name"`
+	ConsumerAddress string    `json:"consumer_address"`
+	Signature       []byte    `json:"signature"`
+	Data            []byte    `json:"data"`
+	Timestamp       int64     `json:"timestamp"`
 }
 
 type VotingMessageType int
 
 const (
-	InitProverSelectionVoting = iota
-	VoteProverSelection
-	InitValidationVoting
+	VoteProverSelection = iota
 	VoteValidation
 )
 
 type VotingMessage struct {
-	Type    VotingMessageType
-	Payload any
+	Type    VotingMessageType `json:"type"`
+	Payload any               `json:"payload"`
 }
 
 type Topic string
@@ -50,6 +48,7 @@ const (
 	GlobalTopic   Topic = "global"
 	RequestsTopic Topic = "requests"
 	VotingTopic   Topic = "voting"
+	ProofsTopic   Topic = "proofs"
 )
 
 func (t Topic) String() string {
@@ -57,6 +56,6 @@ func (t Topic) String() string {
 }
 
 type ProverSelectionMessage struct {
-	RequestID RequestID
-	PeerID    peer.ID
+	RequestID RequestID `json:"request_id"`
+	PeerID    peer.ID   `json:"peer_id"`
 }

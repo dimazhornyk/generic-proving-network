@@ -1,9 +1,9 @@
 package common
 
 import (
-	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/libp2p/go-libp2p/core"
+	"github.com/pkg/errors"
 )
 
 type Config struct {
@@ -17,11 +17,11 @@ type Config struct {
 func NewConfig() (*Config, error) {
 	conf := new(Config)
 	if err := env.Parse(conf); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error on parsing config")
 	}
 
 	if err := validateConfig(*conf); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error on validating config")
 	}
 
 	return conf, nil
@@ -29,19 +29,19 @@ func NewConfig() (*Config, error) {
 
 func validateConfig(cfg Config) error {
 	if cfg.ProtocolID == "" {
-		return fmt.Errorf("protocol ID is required")
+		return errors.New("protocol ID is required")
 	}
 
 	if cfg.Namespace == "" {
-		return fmt.Errorf("namespace is required")
+		return errors.New("namespace is required")
 	}
 
 	if cfg.PrivateKeyPath == "" {
-		return fmt.Errorf("private key path is required")
+		return errors.New("private key path is required")
 	}
 
 	if cfg.Port == "" {
-		return fmt.Errorf("port is required")
+		return errors.New("port is required")
 	}
 
 	return nil

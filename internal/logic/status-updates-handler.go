@@ -1,10 +1,10 @@
 package logic
 
 import (
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
 )
 
 type StatusUpdatesHandler struct {

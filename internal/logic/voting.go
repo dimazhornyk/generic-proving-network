@@ -55,7 +55,7 @@ func (m VotingMap[K, V]) Delete(key K) {
 	delete(m, key)
 }
 
-func (m VotingMap[K, V]) GetWinner(key K) (V, error) {
+func (m VotingMap[K, V]) GetWinner(key K) (*V, error) {
 	voting, ok := m[key]
 	if !ok {
 		return nil, errors.New("unknown voting key")
@@ -86,5 +86,5 @@ func (m VotingMap[K, V]) GetWinner(key K) (V, error) {
 		return nil, errors.New("voting has drawn")
 	}
 
-	return winner, nil
+	return &winner, nil
 }

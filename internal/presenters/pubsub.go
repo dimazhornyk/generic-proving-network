@@ -3,11 +3,11 @@ package presenters
 import (
 	"context"
 	"encoding/json"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
-	"multi-proving-client/internal/connectors"
-	"multi-proving-client/internal/logic"
 )
 
 type Listener struct {
@@ -17,9 +17,12 @@ type Listener struct {
 	statusUpdatesHandler *logic.StatusUpdatesHandler
 }
 
-func NewListener(pubsub *connectors.PubSub) *Listener {
+func NewListener(pubsub *connectors.PubSub, vh *logic.VotingHandler, rh *logic.ProvingRequestsHandler, sh *logic.StatusUpdatesHandler) *Listener {
 	return &Listener{
-		pubsub: pubsub,
+		pubsub:               pubsub,
+		votingHandler:        vh,
+		requestsHandler:      rh,
+		statusUpdatesHandler: sh,
 	}
 }
 
@@ -102,7 +105,7 @@ func (l *Listener) ListenProvingRequests(ctx context.Context) error {
 			continue
 		}
 
-		go l.requestsHandler.Handle(pubsubMsg.ReceivedFrom, msg)
+		go l.requestsHandler.Handle(ctx, msg)
 	}
 }
 
