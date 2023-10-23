@@ -2,11 +2,6 @@ package common
 
 import "github.com/libp2p/go-libp2p/core/peer"
 
-type ProverMessage struct {
-	RequestID string `json:"request_id"`
-	Data      []byte `json:"data"`
-}
-
 type CalculateProofRequest struct {
 	ConsumerName    string
 	ConsumerAddress string

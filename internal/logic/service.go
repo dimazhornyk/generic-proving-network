@@ -18,7 +18,8 @@ import (
 	"time"
 )
 
-const urlTemplate = "http://localhost:%s/prove"
+const proveURL = "http://localhost:%s/prove"
+const validateURL = "http://localhost:%s/validate"
 
 // TODO: rename to service after GoLand is fixed
 type ServiceStruct struct {
@@ -41,7 +42,7 @@ func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubS
 	}
 }
 
-func (s ServiceStruct) Start() error {
+func (s *ServiceStruct) Start() error {
 	images := common.Map(s.consumers, func(c common.Consumer) string {
 		return c.Image
 	})
@@ -53,7 +54,7 @@ func (s ServiceStruct) Start() error {
 	return nil
 }
 
-func (s ServiceStruct) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
+func (s *ServiceStruct) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
 	msg := common.ProvingRequestMessage{
 		ID:              uuid.New().String(),
 		ConsumerName:    req.ConsumerName,
@@ -71,7 +72,7 @@ func (s ServiceStruct) InitiateProofCalculation(req common.CalculateProofRequest
 	return nil, nil
 }
 
-func (s ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp int64) (peer.ID, error) {
+func (s *ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp int64) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
 		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) {
@@ -97,14 +98,8 @@ func (s ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp i
 	return nodes[idx].PeerID, nil
 }
 
-func (s ServiceStruct) ComputeProof(request common.ProvingRequestMessage) ([]byte, error) {
-	var image string
-	for _, consumer := range s.consumers {
-		if consumer.Name == request.ConsumerName {
-			image = consumer.Image
-		}
-	}
-
+func (s *ServiceStruct) ComputeProof(req common.ProvingRequestMessage) ([]byte, error) {
+	image := s.getConsumerImage(req.ConsumerName)
 	if image == "" {
 		return nil, errors.New("unknown consumer")
 	}
@@ -114,26 +109,80 @@ func (s ServiceStruct) ComputeProof(request common.ProvingRequestMessage) ([]byt
 		return nil, errors.Wrap(err, "error getting container ID")
 	}
 
-	msg := common.ProverMessage{
-		RequestID: request.ID,
-		Data:      request.Data,
+	msg := common.ProvingMessage{
+		RequestID: req.ID,
+		Data:      req.Data,
 	}
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error marshalling prover message")
 	}
 
-	resp, err := http.Post(fmt.Sprintf(urlTemplate, port), "application/json", bytes.NewReader(b))
+	resp, err := http.Post(fmt.Sprintf(proveURL, port), "application/json", bytes.NewReader(b))
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting the prover's container")
 	}
 
-	proof, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading the response body")
 	}
 
-	return proof, nil
+	var response common.ProvingResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, errors.Wrap(err, "error unmarshalling response")
+	}
+
+	return response.Proof, nil
+}
+
+func (s *ServiceStruct) ValidateProof(requestID common.RequestID, consumer string, data, proof []byte) (bool, error) {
+	image := s.getConsumerImage(consumer)
+	if image == "" {
+		return false, errors.New("unknown consumer")
+	}
+
+	port, err := s.docker.GetContainerPort(image)
+	if err != nil {
+		return false, errors.Wrap(err, "error getting container ID")
+	}
+
+	msg := common.ValidationMessage{
+		RequestID: requestID,
+		Proof:     proof,
+		Data:      data,
+	}
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return false, errors.Wrap(err, "error marshalling validation message")
+	}
+
+	resp, err := http.Post(fmt.Sprintf(validateURL, port), "application/json", bytes.NewReader(b))
+	if err != nil {
+		return false, errors.Wrap(err, "error requesting the prover's container")
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, errors.Wrap(err, "error reading the response body")
+	}
+
+	var response common.ValidationResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return false, errors.Wrap(err, "error unmarshalling response")
+	}
+
+	return response.Valid, nil
+}
+
+func (s *ServiceStruct) getConsumerImage(consumerName string) string {
+	for _, consumer := range s.consumers {
+		if consumer.Name == consumerName {
+			return consumer.Image
+		}
+	}
+
+	return ""
 }
 
 func isNodeAppropriate(node common.NodeData, maxTimestamp int64) bool {

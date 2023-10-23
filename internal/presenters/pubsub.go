@@ -5,19 +5,20 @@ import (
 	"encoding/json"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
-	"github.com/dimazhornyk/generic-proving-network/internal/logic"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
 	"github.com/pkg/errors"
 	"log/slog"
 )
 
 type Listener struct {
 	pubsub               *connectors.PubSub
-	votingHandler        *logic.VotingHandler
-	requestsHandler      *logic.ProvingRequestsHandler
-	statusUpdatesHandler *logic.StatusUpdatesHandler
+	votingHandler        *handlers.VotingHandler
+	requestsHandler      *handlers.ProvingRequestsHandler
+	statusUpdatesHandler *handlers.StatusUpdatesHandler
+	proofsHandler        *handlers.ProofsHandler
 }
 
-func NewListener(pubsub *connectors.PubSub, vh *logic.VotingHandler, rh *logic.ProvingRequestsHandler, sh *logic.StatusUpdatesHandler) *Listener {
+func NewListener(pubsub *connectors.PubSub, vh *handlers.VotingHandler, rh *handlers.ProvingRequestsHandler, sh *handlers.StatusUpdatesHandler) *Listener {
 	return &Listener{
 		pubsub:               pubsub,
 		votingHandler:        vh,
@@ -31,6 +32,7 @@ func (l *Listener) Listen(ctx context.Context) error {
 		l.ListenStateUpdates,
 		l.ListenProvingRequests,
 		l.ListenVoting,
+		l.ListenProofs,
 	}
 
 	errs := make(chan error, len(funcs))
@@ -106,6 +108,31 @@ func (l *Listener) ListenProvingRequests(ctx context.Context) error {
 		}
 
 		go l.requestsHandler.Handle(ctx, msg)
+	}
+}
+
+func (l *Listener) ListenProofs(ctx context.Context) error {
+	subscription, err := l.pubsub.Subscribe(common.ProofsTopic)
+	if err != nil {
+		return errors.Wrap(err, "error subscribing to voting topic")
+	}
+
+	for {
+		pubsubMsg, err := subscription.Next(ctx)
+		if err != nil {
+			slog.Error("error getting next message from subscription", err)
+
+			continue
+		}
+
+		var msg common.ProofSubmissionMessage
+		if err := json.Unmarshal(pubsubMsg.Data, &msg); err != nil {
+			slog.Error("error unmarshalling voting message", err)
+
+			continue
+		}
+
+		go l.proofsHandler.Handle(ctx, pubsubMsg.ReceivedFrom, msg)
 	}
 }
 

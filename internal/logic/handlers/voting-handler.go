@@ -1,9 +1,10 @@
-package logic
+package handlers
 
 import (
 	"context"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -15,21 +16,21 @@ const VoteDuration = time.Second * 4
 
 type VotingHandler struct {
 	host              host.Host
-	state             *State
-	service           *ServiceStruct
+	state             *logic.State
+	service           *logic.ServiceStruct
 	pubsub            *connectors.PubSub
-	selectionVotings  VotingMap[common.RequestID, peer.ID]
-	validationVotings VotingMap[common.RequestID, bool]
+	selectionVotings  logic.VotingMap[common.RequestID, peer.ID]
+	validationVotings logic.VotingMap[common.RequestID, bool]
 }
 
-func NewVotingHandler(host host.Host, service *ServiceStruct, state *State, pubsub *connectors.PubSub) *VotingHandler {
+func NewVotingHandler(host host.Host, service *logic.ServiceStruct, state *logic.State, pubsub *connectors.PubSub) *VotingHandler {
 	return &VotingHandler{
 		host:              host,
 		service:           service,
 		state:             state,
 		pubsub:            pubsub,
-		selectionVotings:  make(VotingMap[common.RequestID, peer.ID]),
-		validationVotings: make(VotingMap[common.RequestID, bool]),
+		selectionVotings:  make(logic.VotingMap[common.RequestID, peer.ID]),
+		validationVotings: make(logic.VotingMap[common.RequestID, bool]),
 	}
 }
 

@@ -1,9 +1,11 @@
-package logic
+package handlers
 
 import (
 	"context"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
+	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -13,12 +15,12 @@ import (
 
 type ProvingRequestsHandler struct {
 	host    host.Host
-	state   *State
-	service *ServiceStruct
+	state   *logic.State
+	service *logic.ServiceStruct
 	pubsub  *connectors.PubSub
 }
 
-func NewProvingRequestsHandler(host host.Host, state *State, service *ServiceStruct, pubsub *connectors.PubSub) *ProvingRequestsHandler {
+func NewProvingRequestsHandler(host host.Host, state *logic.State, service *logic.ServiceStruct, pubsub *connectors.PubSub) *ProvingRequestsHandler {
 	return &ProvingRequestsHandler{
 		host:    host,
 		state:   state,
@@ -68,14 +70,23 @@ func (h *ProvingRequestsHandler) Handle(ctx context.Context, msg common.ProvingR
 			return
 		}
 
-		if err := h.submitProof(proof); err != nil {
+		if err := h.submitProof(msg.ID, proof); err != nil {
 			slog.Error("error submitting proof", slog.String("err", err.Error()))
 		}
 	}
 }
 
-func (h *ProvingRequestsHandler) submitProof(proof []byte) error {
-	// TODO: implement
+func (h *ProvingRequestsHandler) submitProof(requestID common.RequestID, proof []byte) error {
+	msg := common.ProofSubmissionMessage{
+		RequestID: requestID,
+		ProofID:   uuid.New().String(),
+		Proof:     proof,
+	}
+
+	if err := h.pubsub.Publish(context.Background(), common.ProofsTopic, msg); err != nil {
+		return errors.Wrap(err, "error publishing the proof")
+	}
+
 	return nil
 }
 

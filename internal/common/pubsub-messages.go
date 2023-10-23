@@ -59,3 +59,9 @@ type ProverSelectionMessage struct {
 	RequestID RequestID `json:"request_id"`
 	PeerID    peer.ID   `json:"peer_id"`
 }
+
+type ProofSubmissionMessage struct {
+	RequestID RequestID `json:"request_id"`
+	ProofID   ProofID   `json:"proof_id"`
+	Proof     []byte    `json:"proof"`
+}

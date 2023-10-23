@@ -5,6 +5,7 @@ import (
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
 	"github.com/dimazhornyk/generic-proving-network/internal/presenters"
 	"go.uber.org/fx"
 )
@@ -27,9 +28,10 @@ func buildApp() *fx.App {
 			connectors.NewHost,
 			logic.NewDHT,
 			logic.NewDiscovery,
-			logic.NewProvingRequestsHandler,
-			logic.NewVotingHandler,
-			logic.NewStatusUpdatesHandler,
+			handlers.NewProvingRequestsHandler,
+			handlers.NewVotingHandler,
+			handlers.NewStatusUpdatesHandler,
+			handlers.NewProofsHandler,
 			connectors.NewPubSub,
 			logic.NewGlobalMessaging,
 			logic.NewNodesMap,

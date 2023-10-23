@@ -1,17 +1,18 @@
-package logic
+package handlers
 
 import (
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
 )
 
 type StatusUpdatesHandler struct {
-	nodes NodesMap
+	nodes logic.NodesMap
 }
 
-func NewStatusUpdatesHandler(nodes NodesMap) *StatusUpdatesHandler {
+func NewStatusUpdatesHandler(nodes logic.NodesMap) *StatusUpdatesHandler {
 	return &StatusUpdatesHandler{
 		nodes: nodes,
 	}
