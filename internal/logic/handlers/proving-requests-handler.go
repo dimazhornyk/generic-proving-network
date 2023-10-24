@@ -93,7 +93,7 @@ func (h *ProvingRequestsHandler) submitProof(requestID common.RequestID, proof [
 func (h *ProvingRequestsHandler) voteProverSelection(ctx context.Context, requestID common.RequestID, provingNodeID peer.ID) error {
 	msg := common.VotingMessage{
 		Type: common.VoteProverSelection,
-		Payload: common.ProverSelectionMessage{
+		Payload: common.ProverSelectionPayload{
 			RequestID: requestID,
 			PeerID:    provingNodeID,
 		},

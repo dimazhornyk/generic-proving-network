@@ -1,8 +1,9 @@
 package connectors
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/gob"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -18,6 +19,9 @@ type PubSub struct {
 }
 
 func NewPubSub(ctx context.Context, host host.Host) (*PubSub, error) {
+	gob.Register(common.ProverSelectionPayload{})
+	gob.Register(common.ValidationPayload{})
+
 	gossipSub, err := pubsub.NewGossipSub(ctx, host)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating a new gossip sub")
@@ -52,10 +56,10 @@ func NewPubSub(ctx context.Context, host host.Host) (*PubSub, error) {
 	}, nil
 }
 
-func (p *PubSub) SendStatusMessage(ctx context.Context, payload common.StatusMessage) error {
-	b, err := json.Marshal(payload)
+func (p *PubSub) SendStatusMessage(ctx context.Context, msg common.StatusMessage) error {
+	b, err := encodeMessage(msg)
 	if err != nil {
-		return errors.Wrap(err, "error marshalling a status message")
+		return errors.Wrap(err, "error encoding a status message")
 	}
 
 	if err := p.globalTopic.Publish(ctx, b); err != nil {
@@ -65,10 +69,10 @@ func (p *PubSub) SendStatusMessage(ctx context.Context, payload common.StatusMes
 	return nil
 }
 
-func (p *PubSub) Publish(ctx context.Context, topic common.Topic, message any) error {
-	b, err := json.Marshal(message)
+func (p *PubSub) Publish(ctx context.Context, topic common.Topic, msg any) error {
+	b, err := encodeMessage(msg)
 	if err != nil {
-		return errors.Wrap(err, "error marshalling a message")
+		return errors.Wrap(err, "error encoding a message")
 	}
 
 	t, err := p.selectTopic(topic)
@@ -101,4 +105,14 @@ func (p *PubSub) selectTopic(topic common.Topic) (*pubsub.Topic, error) {
 	default:
 		return nil, errors.New("unknown topic")
 	}
+}
+
+func encodeMessage(msg any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if err := enc.Encode(msg); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }

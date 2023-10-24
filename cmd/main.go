@@ -27,6 +27,7 @@ func buildApp() *fx.App {
 			connectors.NewDocker,
 			connectors.NewPrivateKey,
 			connectors.NewHost,
+			logic.NewEncoding,
 			logic.NewDHT,
 			logic.NewDiscovery,
 			handlers.NewProvingRequestsHandler,

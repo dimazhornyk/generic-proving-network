@@ -10,6 +10,7 @@ import (
 	"os"
 )
 
+//nolint:ireturn
 func NewPrivateKey(cfg *common.Config) (crypto.PrivKey, error) {
 	privBytes, err := os.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {

@@ -50,7 +50,7 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		return
 	}
 
-	votingPayload := common.ValidationMessage{
+	votingPayload := common.ValidationPayload{
 		RequestID:           msg.RequestID,
 		ProofID:             msg.ProofID,
 		IsValid:             valid,
@@ -71,6 +71,7 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		return
 	}
 	votingPayload.Signature = signature
+
 	votingMsg := common.VotingMessage{
 		Type:    common.VoteValidation,
 		Payload: votingPayload,

@@ -41,6 +41,12 @@ func (s *State) GetDataByProvingRequestID(requestID common.RequestID) (RequestEx
 	return data, nil
 }
 
+func (s *State) HasRequest(requestID common.RequestID) bool {
+	_, ok := s.provingRequestsByID[requestID]
+
+	return ok
+}
+
 func (s *State) SaveRequest(provingNode peer.ID, data common.ProvingRequestMessage) error {
 	s.provingRequestsByID[data.ID] = RequestExtension{ProvingRequestMessage: data, ProvingPeerID: provingNode}
 

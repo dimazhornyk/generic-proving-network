@@ -48,14 +48,33 @@ func (h *VotingHandler) Handle(ctx context.Context, peerID peer.ID, msg common.V
 }
 
 func (h *VotingHandler) handleSelectionVoting(voterID peer.ID, message common.VotingMessage) error {
-	//h.selectionVotings.Create(requestID, creatorID)
-
-	msg, ok := message.Payload.(common.ProverSelectionMessage)
+	payload, ok := message.Payload.(common.ProverSelectionPayload)
 	if !ok {
 		return errors.New("invalid payload type for VoteProverSelection")
 	}
 
-	return h.selectionVotings.Add(msg.RequestID, voterID, msg.PeerID)
+	if !h.state.HasRequest(payload.RequestID) {
+		return errors.New("unknown requestID")
+	}
+
+	h.selectionVotings.Add(payload.RequestID, voterID, payload.PeerID)
+
+	return nil
+}
+
+func (h *VotingHandler) handleValidationVoting(voterID peer.ID, message common.VotingMessage) error {
+	payload, ok := message.Payload.(common.ValidationPayload)
+	if !ok {
+		return errors.New("invalid payload type for VoteValidation")
+	}
+
+	if !h.state.HasRequest(payload.RequestID) {
+		return errors.New("unknown requestID")
+	}
+
+	h.validationVotings.Add(payload.RequestID, voterID, payload.IsValid)
+
+	return nil
 }
 
 //func (h *VotingHandler) finalizeVoting(request common.ProvingRequestMessage) {

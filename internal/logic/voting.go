@@ -3,13 +3,11 @@ package logic
 import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"log/slog"
 )
 
 type Voting[K, V comparable] struct {
 	VotingKey K
 	Votes     map[peer.ID]V
-	CreatedBy peer.ID
 }
 
 type VotingMap[K, V comparable] map[K]Voting[K, V]
@@ -18,28 +16,15 @@ func NewVotingMap[K, V comparable]() VotingMap[K, V] {
 	return make(VotingMap[K, V])
 }
 
-func (m VotingMap[K, V]) Add(key K, voter peer.ID, value V) error {
+func (m VotingMap[K, V]) Add(key K, voter peer.ID, value V) {
 	if _, ok := m[key]; !ok {
-		return errors.New("unknown voting key")
+		m[key] = Voting[K, V]{
+			VotingKey: key,
+			Votes:     make(map[peer.ID]V),
+		}
 	}
 
 	m[key].Votes[voter] = value
-
-	return nil
-}
-
-func (m VotingMap[K, V]) Create(key K, createdBy peer.ID) {
-	if _, ok := m[key]; ok {
-		slog.Warn("attempt to create voting with existing key", slog.Any("key", key))
-
-		return
-	}
-
-	m[key] = Voting[K, V]{
-		VotingKey: key,
-		Votes:     make(map[peer.ID]V),
-		CreatedBy: createdBy,
-	}
 }
 
 func (m VotingMap[K, V]) Get(key K) (Voting[K, V], error) {

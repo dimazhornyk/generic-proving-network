@@ -55,7 +55,7 @@ func (t Topic) String() string {
 	return string(t)
 }
 
-type ProverSelectionMessage struct {
+type ProverSelectionPayload struct {
 	RequestID RequestID `json:"request_id"`
 	PeerID    peer.ID   `json:"peer_id"`
 }
@@ -66,7 +66,7 @@ type ProofSubmissionMessage struct {
 	Proof     []byte    `json:"proof"`
 }
 
-type ValidationMessage struct {
+type ValidationPayload struct {
 	RequestID           RequestID `json:"request_id"`
 	ProofID             ProofID   `json:"proof_id"`
 	IsValid             bool      `json:"is_valid"`
