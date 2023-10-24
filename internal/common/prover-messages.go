@@ -9,7 +9,7 @@ type ProvingResponse struct {
 	Proof []byte `json:"proof"`
 }
 
-type ValidationMessage struct {
+type ValidationProverMessage struct {
 	RequestID string `json:"request_id"`
 	Proof     []byte `json:"proof"`
 	Data      []byte `json:"data"`

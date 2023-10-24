@@ -65,3 +65,11 @@ type ProofSubmissionMessage struct {
 	ProofID   ProofID   `json:"proof_id"`
 	Proof     []byte    `json:"proof"`
 }
+
+type ValidationMessage struct {
+	RequestID           RequestID `json:"request_id"`
+	ProofID             ProofID   `json:"proof_id"`
+	IsValid             bool      `json:"is_valid"`
+	ValidationTimestamp int64     `json:"validation_timestamp"`
+	Signature           []byte    `json:"signature,omitempty"`
+}

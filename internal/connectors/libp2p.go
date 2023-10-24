@@ -10,8 +10,7 @@ import (
 	"os"
 )
 
-//nolint:ireturn
-func NewHost(cfg *common.Config) (host.Host, error) {
+func NewPrivateKey(cfg *common.Config) (crypto.PrivKey, error) {
 	privBytes, err := os.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading private key")
@@ -22,6 +21,11 @@ func NewHost(cfg *common.Config) (host.Host, error) {
 		return nil, errors.Wrap(err, "error unmarshalling private key")
 	}
 
+	return priv, nil
+}
+
+//nolint:ireturn
+func NewHost(cfg *common.Config, priv crypto.PrivKey) (host.Host, error) {
 	h, err := libp2p.New(
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/0.0.0.0/tcp/%s", cfg.Port)),
 		libp2p.Identity(priv),

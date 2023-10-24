@@ -25,6 +25,7 @@ func buildApp() *fx.App {
 			func() context.Context { return context.Background() },
 			common.NewConfig,
 			connectors.NewDocker,
+			connectors.NewPrivateKey,
 			connectors.NewHost,
 			logic.NewDHT,
 			logic.NewDiscovery,

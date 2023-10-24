@@ -147,7 +147,7 @@ func (s *ServiceStruct) ValidateProof(requestID common.RequestID, consumer strin
 		return false, errors.Wrap(err, "error getting container ID")
 	}
 
-	msg := common.ValidationMessage{
+	msg := common.ValidationProverMessage{
 		RequestID: requestID,
 		Proof:     proof,
 		Data:      data,
