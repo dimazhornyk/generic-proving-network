@@ -1,15 +1,16 @@
 package logic
 
 import (
-	"fmt"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 )
 
+var errUnknownRequest = errors.New("unknown request")
+
 type RequestExtension struct {
 	common.ProvingRequestMessage
-	ProvingPeerID peer.ID
+	ProvingPeers []peer.ID
 }
 
 type State struct {
@@ -32,10 +33,10 @@ func (s *State) GetLatestProof(consumerName string) ([]byte, error) {
 	return nil, errors.New("unknown consumer")
 }
 
-func (s *State) GetDataByProvingRequestID(requestID common.RequestID) (RequestExtension, error) {
+func (s *State) GetProvingRequestByID(requestID common.RequestID) (RequestExtension, error) {
 	data, ok := s.provingRequestsByID[requestID]
 	if !ok {
-		return RequestExtension{}, fmt.Errorf("unknown requestID: %s", requestID)
+		return RequestExtension{}, errUnknownRequest
 	}
 
 	return data, nil
@@ -47,8 +48,23 @@ func (s *State) HasRequest(requestID common.RequestID) bool {
 	return ok
 }
 
-func (s *State) SaveRequest(provingNode peer.ID, data common.ProvingRequestMessage) error {
-	s.provingRequestsByID[data.ID] = RequestExtension{ProvingRequestMessage: data, ProvingPeerID: provingNode}
+func (s *State) SaveRequest(data common.ProvingRequestMessage) error {
+	s.provingRequestsByID[data.ID] = RequestExtension{
+		ProvingRequestMessage: data,
+		ProvingPeers:          make([]peer.ID, 0),
+	}
+
+	return nil
+}
+
+func (s *State) AddProvingPeer(requestID common.RequestID, peerID peer.ID) error {
+	if !s.HasRequest(requestID) {
+		return errUnknownRequest
+	}
+
+	req := s.provingRequestsByID[requestID]
+	req.ProvingPeers = append(req.ProvingPeers, peerID)
+	s.provingRequestsByID[requestID] = req
 
 	return nil
 }

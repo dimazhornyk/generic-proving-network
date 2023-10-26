@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 	"time"
@@ -72,10 +73,72 @@ func (s *ServiceStruct) InitiateProofCalculation(req common.CalculateProofReques
 	return nil, nil
 }
 
-func (s *ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp int64) (peer.ID, error) {
+func (s *ServiceStruct) HandleProverSelection(ctx context.Context, msg common.ProvingRequestMessage, excludedPeers ...peer.ID) error {
+	proverID, err := s.selectProvingNode(msg.ConsumerName, msg.Timestamp, excludedPeers...)
+	if err != nil {
+		return errors.Wrap(err, "error selecting prover")
+	}
+
+	slog.Info("selected prover",
+		slog.String("nodeID", proverID.String()),
+		slog.String("requestID", msg.ID),
+	)
+
+	if err := s.voteProverSelection(ctx, msg.ID, proverID); err != nil {
+		return errors.Wrap(err, "error voting for prover selection")
+	}
+
+	if proverID == s.host.ID() {
+		slog.Info("I am the selected node, starting proving...")
+
+		proof, err := s.computeProof(msg)
+		if err != nil {
+			return errors.Wrap(err, "error computing the proof")
+		}
+
+		if err := s.submitProof(msg.ID, proof); err != nil {
+			return errors.Wrap(err, "error submitting the proof")
+		}
+	}
+
+	return nil
+}
+
+func (s *ServiceStruct) submitProof(requestID common.RequestID, proof []byte) error {
+	msg := common.ProofSubmissionMessage{
+		RequestID: requestID,
+		ProofID:   uuid.New().String(),
+		Proof:     proof,
+	}
+
+	if err := s.pubsub.Publish(context.Background(), common.ProofsTopic, msg); err != nil {
+		return errors.Wrap(err, "error publishing the proof")
+	}
+
+	return nil
+}
+
+func (s *ServiceStruct) voteProverSelection(ctx context.Context, requestID common.RequestID, provingNodeID peer.ID) error {
+	msg := common.VotingMessage{
+		Type: common.VoteProverSelection,
+		Payload: common.ProverSelectionPayload{
+			RequestID: requestID,
+			PeerID:    provingNodeID,
+		},
+	}
+
+	if err := s.pubsub.Publish(ctx, common.VotingTopic, msg); err != nil {
+		return errors.Wrap(err, "error when publishing to voting topic")
+	}
+
+	return nil
+}
+
+func (s *ServiceStruct) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
-		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) {
+		// is committed to the consumer, is idle, went up earlier than request was sent, is not in the exclude list
+		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) && !slices.Contains(excludeList, node.PeerID) {
 			nodes = append(nodes, node)
 		}
 	}
@@ -98,7 +161,7 @@ func (s *ServiceStruct) SelectProvingNode(consumerName string, requestTimestamp 
 	return nodes[idx].PeerID, nil
 }
 
-func (s *ServiceStruct) ComputeProof(req common.ProvingRequestMessage) ([]byte, error) {
+func (s *ServiceStruct) computeProof(req common.ProvingRequestMessage) ([]byte, error) {
 	image := s.getConsumerImage(req.ConsumerName)
 	if image == "" {
 		return nil, errors.New("unknown consumer")

@@ -79,6 +79,7 @@ func (d Docker) StartContainers(images []string) error {
 			continue
 		}
 
+		slog.Info("pulling an image", slog.String("image", image))
 		if err := d.Pull(image); err != nil {
 			return errors.Wrap(err, "error pulling an image")
 		}
@@ -88,7 +89,8 @@ func (d Docker) StartContainers(images []string) error {
 			return errors.Wrap(err, "error starting a container")
 		}
 
-		d.containers[image] = c
+		slog.Info("container is started", slog.String("id", c.ID), slog.String("image", image))
+		d.containers[image] = c // TODO: kill containers on graceful shutdown
 	}
 
 	return nil

@@ -5,6 +5,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+var errUnknownVotingKey = errors.New("unknown request")
+var errVotingHasDrawn = errors.New("voting has drawn")
+
 type Voting[K, V comparable] struct {
 	VotingKey K
 	Votes     map[peer.ID]V
@@ -12,12 +15,9 @@ type Voting[K, V comparable] struct {
 
 type VotingMap[K, V comparable] map[K]Voting[K, V]
 
-func NewVotingMap[K, V comparable]() VotingMap[K, V] {
-	return make(VotingMap[K, V])
-}
-
-func (m VotingMap[K, V]) Add(key K, voter peer.ID, value V) {
-	if _, ok := m[key]; !ok {
+func (m VotingMap[K, V]) Add(key K, voter peer.ID, value V) bool {
+	_, ok := m[key]
+	if !ok {
 		m[key] = Voting[K, V]{
 			VotingKey: key,
 			Votes:     make(map[peer.ID]V),
@@ -25,12 +25,14 @@ func (m VotingMap[K, V]) Add(key K, voter peer.ID, value V) {
 	}
 
 	m[key].Votes[voter] = value
+
+	return ok
 }
 
 func (m VotingMap[K, V]) Get(key K) (Voting[K, V], error) {
 	value, ok := m[key]
 	if !ok {
-		return Voting[K, V]{}, errors.New("unknown voting key")
+		return Voting[K, V]{}, errUnknownVotingKey
 	}
 
 	return value, nil
@@ -43,7 +45,7 @@ func (m VotingMap[K, V]) Delete(key K) {
 func (m VotingMap[K, V]) GetWinner(key K) (*V, error) {
 	voting, ok := m[key]
 	if !ok {
-		return nil, errors.New("unknown voting key")
+		return nil, errUnknownVotingKey
 	}
 
 	opts := make(map[V]int)
@@ -68,7 +70,7 @@ func (m VotingMap[K, V]) GetWinner(key K) (*V, error) {
 	}
 
 	if hasEqual {
-		return nil, errors.New("voting has drawn")
+		return nil, errVotingHasDrawn
 	}
 
 	return &winner, nil
