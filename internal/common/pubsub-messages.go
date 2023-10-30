@@ -71,5 +71,6 @@ type ValidationPayload struct {
 	ProofID             ProofID   `json:"proof_id"`
 	IsValid             bool      `json:"is_valid"`
 	ValidationTimestamp int64     `json:"validation_timestamp"`
+	PoolSize            int       `json:"pool_size"`
 	Signature           []byte    `json:"signature,omitempty"`
 }

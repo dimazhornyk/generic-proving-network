@@ -19,18 +19,18 @@ const ValidationVotingDuration = time.Second * 6
 
 type VotingHandler struct {
 	host              host.Host
-	state             *logic.State
-	service           *logic.ServiceStruct
+	storage           *logic.Storage
+	service           *logic.Service
 	pubsub            *connectors.PubSub
 	selectionVotings  logic.VotingMap[common.RequestID, peer.ID]
 	validationVotings logic.VotingMap[common.RequestID, bool]
 }
 
-func NewVotingHandler(host host.Host, service *logic.ServiceStruct, state *logic.State, pubsub *connectors.PubSub) *VotingHandler {
+func NewVotingHandler(host host.Host, service *logic.Service, storage *logic.Storage, pubsub *connectors.PubSub) *VotingHandler {
 	return &VotingHandler{
 		host:              host,
 		service:           service,
-		state:             state,
+		storage:           storage,
 		pubsub:            pubsub,
 		selectionVotings:  make(logic.VotingMap[common.RequestID, peer.ID]),
 		validationVotings: make(logic.VotingMap[common.RequestID, bool]),
@@ -57,10 +57,10 @@ func (h *VotingHandler) handleSelectionVoting(voterID peer.ID, message common.Vo
 		return errors.New("invalid payload type for VoteProverSelection")
 	}
 
-	if !h.state.HasRequest(payload.RequestID) {
+	if !h.storage.HasRequest(payload.RequestID) {
 		slog.Info("unknown requestID, double checking after timeout", slog.String("requestID", payload.RequestID))
 		time.Sleep(DoubleCheckInterval)
-		if !h.state.HasRequest(payload.RequestID) {
+		if !h.storage.HasRequest(payload.RequestID) {
 			return errors.New("unknown requestID")
 		}
 	}
@@ -77,7 +77,7 @@ func (h *VotingHandler) handleSelectionVoting(voterID peer.ID, message common.Vo
 			return errors.New("no selection votes")
 		}
 
-		if err := h.state.AddProvingPeer(payload.RequestID, *winner); err != nil {
+		if err := h.storage.AddProvingPeer(payload.RequestID, *winner); err != nil {
 			return errors.Wrap(err, "error adding proving peer")
 		}
 	}
@@ -91,7 +91,7 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 		return errors.New("invalid payload type for VoteValidation")
 	}
 
-	if !h.state.HasRequest(payload.RequestID) {
+	if !h.storage.HasRequest(payload.RequestID) {
 		return errors.New("unknown requestID")
 	}
 
@@ -111,6 +111,10 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 			return h.handleInvalidProof(ctx, payload.RequestID)
 		}
 
+		if err := h.storage.FinishProving(payload.RequestID); err != nil {
+			return errors.Wrap(err, "error finishing proving")
+		}
+
 		// TODO: should we do anything if the proof is valid?
 		// probably the node that has submitted the proof has to collect the signatures, batch them and sent to the
 		// contract at some point in time, but it has to be a short timeframe so contract can know for sure the size of
@@ -121,7 +125,7 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 }
 
 func (h *VotingHandler) handleInvalidProof(ctx context.Context, requestID common.RequestID) error {
-	req, err := h.state.GetProvingRequestByID(requestID)
+	req, err := h.storage.GetProvingRequestByID(requestID)
 	if err != nil {
 		return errors.Wrap(err, "error getting proving request")
 	}
@@ -133,6 +137,7 @@ func (h *VotingHandler) handleInvalidProof(ctx context.Context, requestID common
 	}
 
 	// TODO: collect signatures and send them to the contract
+	// TODO: delete request from storage
 
 	return nil
 }

@@ -27,7 +27,6 @@ func buildApp() *fx.App {
 			connectors.NewDocker,
 			connectors.NewPrivateKey,
 			connectors.NewHost,
-			logic.NewEncoding,
 			logic.NewDHT,
 			logic.NewDiscovery,
 			handlers.NewProvingRequestsHandler,
@@ -37,16 +36,20 @@ func buildApp() *fx.App {
 			connectors.NewPubSub,
 			logic.NewGlobalMessaging,
 			logic.NewNodesMap,
-			logic.NewState,
+			logic.NewStorage,
 			logic.NewService,
+			logic.NewInitialSyncer,
 			presenters.NewAPI,
 			presenters.NewListener,
 			// handles proofs generation, important for service to start first because it has to pull docker images
-			fx.Invoke(func(ctx context.Context, service *logic.ServiceStruct) error {
+			fx.Invoke(func(ctx context.Context, service *logic.Service) error {
 				return service.Start()
 			}),
+			fx.Invoke(func(ctx context.Context, syncer *logic.InitialSyncer) error {
+				return syncer.Sync(ctx)
+			}),
 			// sends status updates
-			fx.Invoke(func(ctx context.Context, cfg *common.Config, messaging *logic.GlobalMessaging) error {
+			fx.Invoke(func(ctx context.Context, cfg *common.Config, messaging *logic.StatusSharing) error {
 				return messaging.Init(ctx, cfg.Consumers)
 			}),
 			// listens to other's messages

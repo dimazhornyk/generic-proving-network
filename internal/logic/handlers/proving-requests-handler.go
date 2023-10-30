@@ -13,15 +13,15 @@ import (
 
 type ProvingRequestsHandler struct {
 	host    host.Host
-	state   *logic.State
-	service *logic.ServiceStruct
+	storage *logic.Storage
+	service *logic.Service
 	pubsub  *connectors.PubSub
 }
 
-func NewProvingRequestsHandler(host host.Host, state *logic.State, service *logic.ServiceStruct, pubsub *connectors.PubSub) *ProvingRequestsHandler {
+func NewProvingRequestsHandler(host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub) *ProvingRequestsHandler {
 	return &ProvingRequestsHandler{
 		host:    host,
-		state:   state,
+		storage: storage,
 		service: service,
 		pubsub:  pubsub,
 	}
@@ -35,7 +35,7 @@ func (h *ProvingRequestsHandler) Handle(ctx context.Context, msg common.ProvingR
 		return
 	}
 
-	if err := h.state.SaveRequest(msg); err != nil {
+	if err := h.storage.SaveRequest(msg); err != nil {
 		slog.Error("error saving proving request", slog.String("err", err.Error()))
 
 		return

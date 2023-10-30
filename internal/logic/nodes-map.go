@@ -33,3 +33,19 @@ func (m NodesMap) UpdateStatus(peerID peer.ID, status common.Status) error {
 
 	return nil
 }
+
+func (m NodesMap) CountNodesForConsumer(consumerName string) int {
+	count := 0
+
+	for _, node := range m {
+		for _, commitment := range node.Commitments {
+			if commitment == consumerName {
+				count++
+
+				break
+			}
+		}
+	}
+
+	return count
+}

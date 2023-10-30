@@ -22,28 +22,29 @@ import (
 const proveURL = "http://localhost:%s/prove"
 const validateURL = "http://localhost:%s/validate"
 
-// TODO: rename to service after GoLand is fixed
-type ServiceStruct struct {
+type Service struct {
 	docker    *connectors.Docker
 	pubsub    *connectors.PubSub
 	host      host.Host
 	nodes     NodesMap
-	state     State
+	storage   *Storage
+	status    *StatusSharing
 	consumers []common.Consumer
 }
 
-func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, state State, host host.Host) *ServiceStruct {
-	return &ServiceStruct{
+func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, storage *Storage, status *StatusSharing, host host.Host) *Service {
+	return &Service{
 		docker:    d,
 		pubsub:    pubsub,
 		nodes:     nodes,
-		state:     state,
+		storage:   storage,
+		status:    status,
 		host:      host,
 		consumers: common.GetConsumers(cfg.Consumers),
 	}
 }
 
-func (s *ServiceStruct) Start() error {
+func (s *Service) Start() error {
 	images := common.Map(s.consumers, func(c common.Consumer) string {
 		return c.Image
 	})
@@ -55,7 +56,7 @@ func (s *ServiceStruct) Start() error {
 	return nil
 }
 
-func (s *ServiceStruct) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
+func (s *Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
 	msg := common.ProvingRequestMessage{
 		ID:              uuid.New().String(),
 		ConsumerName:    req.ConsumerName,
@@ -73,7 +74,7 @@ func (s *ServiceStruct) InitiateProofCalculation(req common.CalculateProofReques
 	return nil, nil
 }
 
-func (s *ServiceStruct) HandleProverSelection(ctx context.Context, msg common.ProvingRequestMessage, excludedPeers ...peer.ID) error {
+func (s *Service) HandleProverSelection(ctx context.Context, msg common.ProvingRequestMessage, excludedPeers ...peer.ID) error {
 	proverID, err := s.selectProvingNode(msg.ConsumerName, msg.Timestamp, excludedPeers...)
 	if err != nil {
 		return errors.Wrap(err, "error selecting prover")
@@ -91,7 +92,7 @@ func (s *ServiceStruct) HandleProverSelection(ctx context.Context, msg common.Pr
 	if proverID == s.host.ID() {
 		slog.Info("I am the selected node, starting proving...")
 
-		proof, err := s.computeProof(msg)
+		proof, err := s.computeProof(ctx, msg)
 		if err != nil {
 			return errors.Wrap(err, "error computing the proof")
 		}
@@ -104,7 +105,7 @@ func (s *ServiceStruct) HandleProverSelection(ctx context.Context, msg common.Pr
 	return nil
 }
 
-func (s *ServiceStruct) submitProof(requestID common.RequestID, proof []byte) error {
+func (s *Service) submitProof(requestID common.RequestID, proof []byte) error {
 	msg := common.ProofSubmissionMessage{
 		RequestID: requestID,
 		ProofID:   uuid.New().String(),
@@ -118,7 +119,7 @@ func (s *ServiceStruct) submitProof(requestID common.RequestID, proof []byte) er
 	return nil
 }
 
-func (s *ServiceStruct) voteProverSelection(ctx context.Context, requestID common.RequestID, provingNodeID peer.ID) error {
+func (s *Service) voteProverSelection(ctx context.Context, requestID common.RequestID, provingNodeID peer.ID) error {
 	msg := common.VotingMessage{
 		Type: common.VoteProverSelection,
 		Payload: common.ProverSelectionPayload{
@@ -134,7 +135,7 @@ func (s *ServiceStruct) voteProverSelection(ctx context.Context, requestID commo
 	return nil
 }
 
-func (s *ServiceStruct) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
+func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
 		// is committed to the consumer, is idle, went up earlier than request was sent, is not in the exclude list
@@ -146,12 +147,12 @@ func (s *ServiceStruct) selectProvingNode(consumerName string, requestTimestamp 
 		return cmp.Compare(a.PeerID.String(), b.PeerID.String())
 	})
 
-	lastProof, err := s.state.GetLatestProof(consumerName)
+	latestProof, err := s.storage.GetLatestProof(consumerName)
 	if err != nil {
 		return "", errors.Wrap(err, "error getting latest proof")
 	}
 
-	random, err := common.ZKPToRandom(lastProof)
+	random, err := common.ZKPToRandom(latestProof.Proof)
 	if err != nil {
 		return "", errors.Wrap(err, "error getting random from last proof")
 	}
@@ -161,7 +162,10 @@ func (s *ServiceStruct) selectProvingNode(consumerName string, requestTimestamp 
 	return nodes[idx].PeerID, nil
 }
 
-func (s *ServiceStruct) computeProof(req common.ProvingRequestMessage) ([]byte, error) {
+func (s *Service) computeProof(ctx context.Context, req common.ProvingRequestMessage) ([]byte, error) {
+	s.status.SetStatus(ctx, common.StatusProving)
+	defer s.status.SetStatus(ctx, common.StatusIdle)
+
 	image := s.getConsumerImage(req.ConsumerName)
 	if image == "" {
 		return nil, errors.New("unknown consumer")
@@ -199,7 +203,7 @@ func (s *ServiceStruct) computeProof(req common.ProvingRequestMessage) ([]byte, 
 	return response.Proof, nil
 }
 
-func (s *ServiceStruct) ValidateProof(requestID common.RequestID, consumer string, data, proof []byte) (bool, error) {
+func (s *Service) ValidateProof(requestID common.RequestID, consumer string, data, proof []byte) (bool, error) {
 	image := s.getConsumerImage(consumer)
 	if image == "" {
 		return false, errors.New("unknown consumer")
@@ -238,7 +242,7 @@ func (s *ServiceStruct) ValidateProof(requestID common.RequestID, consumer strin
 	return response.Valid, nil
 }
 
-func (s *ServiceStruct) getConsumerImage(consumerName string) string {
+func (s *Service) getConsumerImage(consumerName string) string {
 	for _, consumer := range s.consumers {
 		if consumer.Name == consumerName {
 			return consumer.Image

@@ -14,20 +14,22 @@ import (
 )
 
 type ProofsHandler struct {
-	host    host.Host
-	state   *logic.State
-	service *logic.ServiceStruct
-	pubsub  *connectors.PubSub
-	key     crypto.PrivKey
+	host     host.Host
+	nodesMap logic.NodesMap
+	storage  *logic.Storage
+	service  *logic.Service
+	pubsub   *connectors.PubSub
+	key      crypto.PrivKey
 }
 
-func NewProofsHandler(key crypto.PrivKey, host host.Host, state *logic.State, service *logic.ServiceStruct, pubsub *connectors.PubSub) *ProofsHandler {
+func NewProofsHandler(key crypto.PrivKey, host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub, nodesMap logic.NodesMap) *ProofsHandler {
 	return &ProofsHandler{
-		host:    host,
-		state:   state,
-		service: service,
-		pubsub:  pubsub,
-		key:     key,
+		host:     host,
+		storage:  storage,
+		service:  service,
+		pubsub:   pubsub,
+		key:      key,
+		nodesMap: nodesMap,
 	}
 }
 
@@ -36,12 +38,20 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		return // no need to verify the proof that we just generated
 	}
 
-	reqData, err := h.state.GetDataByProvingRequestID(msg.RequestID)
+	reqData, err := h.storage.GetProvingRequestByID(msg.RequestID)
 	if err != nil {
 		slog.Error("error getting proving request data", slog.String("err", err.Error()))
 
 		return
 	}
+
+	if err := h.storage.AddProof(msg.RequestID, peerID, msg.ProofID, msg.Proof); err != nil {
+		slog.Error("error adding proof to storage", slog.String("err", err.Error()))
+
+		return
+	}
+
+	// TODO: check if the node's status was Proving
 
 	valid, err := h.service.ValidateProof(msg.RequestID, reqData.ConsumerName, reqData.Data, msg.Proof)
 	if err != nil {
@@ -54,6 +64,7 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		RequestID:           msg.RequestID,
 		ProofID:             msg.ProofID,
 		IsValid:             valid,
+		PoolSize:            h.nodesMap.CountNodesForConsumer(reqData.ConsumerName),
 		ValidationTimestamp: time.Now().UnixNano(),
 	}
 

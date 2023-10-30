@@ -7,10 +7,10 @@ import (
 )
 
 type API struct {
-	service *logic.ServiceStruct
+	service *logic.Service
 }
 
-func NewAPI(service *logic.ServiceStruct) *API {
+func NewAPI(service *logic.Service) *API {
 	return &API{
 		service: service,
 	}

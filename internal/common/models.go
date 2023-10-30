@@ -19,7 +19,6 @@ type NodeData struct {
 
 type ZKProof struct {
 	ProofID   ProofID
-	RequestID RequestID
 	Proof     []byte
 	Timestamp int64
 }
