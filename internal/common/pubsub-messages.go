@@ -68,9 +68,9 @@ type ProofSubmissionMessage struct {
 
 type ValidationPayload struct {
 	RequestID           RequestID `json:"request_id"`
-	ProofID             ProofID   `json:"proof_id"`
+	ProverID            peer.ID   `json:"prover_id"`
 	IsValid             bool      `json:"is_valid"`
-	ValidationTimestamp int64     `json:"validation_timestamp"`
-	PoolSize            int       `json:"pool_size"`
+	ValidationTimestamp int64     `json:"validation_timestamp,omitempty"`
+	PoolSize            int       `json:"pool_size,omitempty"`
 	Signature           []byte    `json:"signature,omitempty"`
 }

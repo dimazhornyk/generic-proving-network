@@ -32,7 +32,20 @@ type Service struct {
 	consumers []common.Consumer
 }
 
-func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, storage *Storage, status *StatusSharing, host host.Host) *Service {
+func NewService(ctx context.Context, cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
+	allConsumers, err := eth.GetAllConsumers(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting consumers from ethereum")
+	}
+
+	consumers := common.Filter(allConsumers, func(consumer common.Consumer) bool {
+		return slices.Contains(cfg.Consumers, consumer.Name)
+	})
+
+	if len(consumers) == 0 {
+		return nil, errors.New("no consumers found")
+	}
+
 	return &Service{
 		docker:    d,
 		pubsub:    pubsub,
@@ -40,8 +53,8 @@ func NewService(cfg common.Config, d *connectors.Docker, pubsub *connectors.PubS
 		storage:   storage,
 		status:    status,
 		host:      host,
-		consumers: common.GetConsumers(cfg.Consumers),
-	}
+		consumers: consumers,
+	}, nil
 }
 
 func (s *Service) Start() error {
@@ -58,7 +71,7 @@ func (s *Service) Start() error {
 
 func (s *Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
 	msg := common.ProvingRequestMessage{
-		ID:              uuid.New().String(),
+		ID:              req.ID,
 		ConsumerName:    req.ConsumerName,
 		ConsumerAddress: req.ConsumerAddress,
 		Signature:       req.Signature,

@@ -61,11 +61,9 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 	}
 
 	votingPayload := common.ValidationPayload{
-		RequestID:           msg.RequestID,
-		ProofID:             msg.ProofID,
-		IsValid:             valid,
-		PoolSize:            h.nodesMap.CountNodesForConsumer(reqData.ConsumerName),
-		ValidationTimestamp: time.Now().UnixNano(),
+		RequestID: msg.RequestID,
+		ProverID:  peerID,
+		IsValid:   valid,
 	}
 
 	b, err := json.Marshal(votingPayload)
@@ -82,6 +80,8 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		return
 	}
 	votingPayload.Signature = signature
+	votingPayload.PoolSize = h.nodesMap.CountNodesForConsumer(reqData.ConsumerName)
+	votingPayload.ValidationTimestamp = time.Now().UnixNano()
 
 	votingMsg := common.VotingMessage{
 		Type:    common.VoteValidation,

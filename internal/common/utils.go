@@ -29,6 +29,18 @@ func Map[T, E any](slice []T, f func(T) E) []E {
 	return res
 }
 
+func Filter[T any](slice []T, f func(T) bool) []T {
+	res := make([]T, 0)
+
+	for _, v := range slice {
+		if f(v) {
+			res = append(res, v)
+		}
+	}
+
+	return res
+}
+
 func AvailablePort() (string, error) {
 	server, err := net.Listen("tcp", ":0")
 	if err != nil {

@@ -22,16 +22,18 @@ type VotingHandler struct {
 	storage           *logic.Storage
 	service           *logic.Service
 	pubsub            *connectors.PubSub
+	ethereum          *connectors.Ethereum
 	selectionVotings  logic.VotingMap[common.RequestID, peer.ID]
 	validationVotings logic.VotingMap[common.RequestID, bool]
 }
 
-func NewVotingHandler(host host.Host, service *logic.Service, storage *logic.Storage, pubsub *connectors.PubSub) *VotingHandler {
+func NewVotingHandler(host host.Host, service *logic.Service, storage *logic.Storage, pubsub *connectors.PubSub, eth *connectors.Ethereum) *VotingHandler {
 	return &VotingHandler{
 		host:              host,
 		service:           service,
 		storage:           storage,
 		pubsub:            pubsub,
+		ethereum:          eth,
 		selectionVotings:  make(logic.VotingMap[common.RequestID, peer.ID]),
 		validationVotings: make(logic.VotingMap[common.RequestID, bool]),
 	}
@@ -95,6 +97,10 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 		return errors.New("unknown requestID")
 	}
 
+	if err := h.storage.AddValidationSignature(payload.RequestID, voterID, payload.Signature); err != nil {
+		return errors.Wrap(err, "error adding validation signature")
+	}
+
 	if !h.validationVotings.Add(payload.RequestID, voterID, payload.IsValid) {
 		time.Sleep(ValidationVotingDuration)
 		isProofValid, err := h.validationVotings.GetWinner(payload.RequestID)
@@ -111,14 +117,19 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 			return h.handleInvalidProof(ctx, payload.RequestID)
 		}
 
-		if err := h.storage.FinishProving(payload.RequestID); err != nil {
-			return errors.Wrap(err, "error finishing proving")
+		signatures, err := h.storage.GetValidationSignatures(payload.RequestID)
+		if err != nil {
+			return errors.Wrap(err, "error getting validation signatures")
 		}
 
-		// TODO: should we do anything if the proof is valid?
-		// probably the node that has submitted the proof has to collect the signatures, batch them and sent to the
-		// contract at some point in time, but it has to be a short timeframe so contract can know for sure the size of
-		// the pool of nodes in the network
+		// TODO: optimize by batching the signatures
+		if err := h.ethereum.SubmitValidationSignatures(ctx, payload.RequestID, signatures, true); err != nil {
+			return errors.Wrap(err, "error submitting validation signatures")
+		}
+
+		if err := h.storage.DeleteProvingRequest(payload.RequestID); err != nil {
+			return errors.Wrap(err, "error finishing proving")
+		}
 	}
 
 	return nil
@@ -136,7 +147,7 @@ func (h *VotingHandler) handleInvalidProof(ctx context.Context, requestID common
 		return h.service.HandleProverSelection(ctx, req.ProvingRequestMessage, req.ProvingPeers...)
 	}
 
-	// TODO: collect signatures and send them to the contract
+	// TODO: collect signatures for all (3) invalid proofs and send them to the contract
 	// TODO: delete request from storage
 
 	return nil

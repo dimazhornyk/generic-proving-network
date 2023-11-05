@@ -23,10 +23,11 @@ func buildApp() *fx.App {
 	return fx.New(
 		fx.Provide(
 			func() context.Context { return context.Background() },
-			common.NewConfig,
+			common.NewConfig(),
 			connectors.NewDocker,
 			connectors.NewPrivateKey,
 			connectors.NewHost,
+			connectors.NewEthereum,
 			logic.NewDHT,
 			logic.NewDiscovery,
 			handlers.NewProvingRequestsHandler,
