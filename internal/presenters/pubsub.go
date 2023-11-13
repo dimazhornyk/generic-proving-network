@@ -1,9 +1,7 @@
 package presenters
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
@@ -77,7 +75,7 @@ func (l *Listener) ListenStateUpdates(ctx context.Context) error {
 		}
 
 		var msg common.StatusMessage
-		if err := decodeMessage(pubsubMsg.Data, &msg); err != nil {
+		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling state update message", err)
 
 			continue
@@ -102,7 +100,7 @@ func (l *Listener) ListenProvingRequests(ctx context.Context) error {
 		}
 
 		var msg common.ProvingRequestMessage
-		if err := decodeMessage(pubsubMsg.Data, &msg); err != nil {
+		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling proving request message", err)
 
 			continue
@@ -127,7 +125,7 @@ func (l *Listener) ListenProofs(ctx context.Context) error {
 		}
 
 		var msg common.ProofSubmissionMessage
-		if err := decodeMessage(pubsubMsg.Data, &msg); err != nil {
+		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling voting message", err)
 
 			continue
@@ -152,7 +150,7 @@ func (l *Listener) ListenVoting(ctx context.Context) error {
 		}
 
 		var msg common.VotingMessage
-		if err := decodeMessage(pubsubMsg.Data, &msg); err != nil {
+		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling voting message", err)
 
 			continue
@@ -160,8 +158,4 @@ func (l *Listener) ListenVoting(ctx context.Context) error {
 
 		go l.votingHandler.Handle(ctx, pubsubMsg.ReceivedFrom, msg)
 	}
-}
-
-func decodeMessage(data []byte, dest any) error {
-	return gob.NewDecoder(bytes.NewReader(data)).Decode(dest)
 }

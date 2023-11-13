@@ -3,6 +3,7 @@ package connectors
 import (
 	"context"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -30,6 +31,10 @@ func NewEthereum(cfg *common.Config) (*Ethereum, error) {
 }
 
 func (e *Ethereum) GetAllConsumers(ctx context.Context) ([]common.Consumer, error) {
+	e.client.CallContract(ctx, ethereum.CallMsg{
+		To: &e.contractAddress,
+	}, nil)
+
 	// TODO: finish and test
 	position := 0
 	arraySlot := e.getArraySlot(position)

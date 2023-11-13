@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -10,23 +12,16 @@ import (
 
 var errUnknownRequest = errors.New("unknown request")
 
-type RequestExtension struct {
-	common.ProvingRequestMessage
-	ProvingPeers         []peer.ID
-	proofs               map[peer.ID]common.ZKProof
-	validationSignatures []common.ValidationSignature
-}
-
 type Storage struct {
 	latestProofs    map[string]common.ZKProof
-	provingRequests map[common.RequestID]RequestExtension
+	provingRequests map[common.RequestID]common.RequestExtension
 	mu              sync.RWMutex
 }
 
 func NewStorage() *Storage {
 	return &Storage{
 		latestProofs:    make(map[string]common.ZKProof),
-		provingRequests: make(map[string]RequestExtension),
+		provingRequests: make(map[string]common.RequestExtension),
 	}
 }
 
@@ -42,13 +37,13 @@ func (s *Storage) GetLatestProof(consumerName string) (common.ZKProof, error) {
 	return common.ZKProof{}, errors.New("unknown consumer")
 }
 
-func (s *Storage) GetProvingRequestByID(requestID common.RequestID) (RequestExtension, error) {
+func (s *Storage) GetProvingRequestByID(requestID common.RequestID) (common.RequestExtension, error) {
 	s.mu.RLock()
 	data, ok := s.provingRequests[requestID]
 	s.mu.RUnlock()
 
 	if !ok {
-		return RequestExtension{}, errUnknownRequest
+		return common.RequestExtension{}, errUnknownRequest
 	}
 
 	return data, nil
@@ -68,11 +63,11 @@ func (s *Storage) SaveRequest(data common.ProvingRequestMessage) error {
 	}
 
 	s.mu.Lock()
-	s.provingRequests[data.ID] = RequestExtension{
+	s.provingRequests[data.ID] = common.RequestExtension{
 		ProvingRequestMessage: data,
 		ProvingPeers:          make([]peer.ID, 0),
-		proofs:                make(map[peer.ID]common.ZKProof),
-		validationSignatures:  make([]common.ValidationSignature, 0),
+		Proofs:                make(map[peer.ID]common.ZKProof),
+		ValidationSignatures:  make([]common.ValidationSignature, 0),
 	}
 	s.mu.Unlock()
 
@@ -105,7 +100,7 @@ func (s *Storage) AddProof(requestID common.RequestID, peerID peer.ID, proofID c
 	req := s.provingRequests[requestID]
 	s.mu.RUnlock()
 
-	req.proofs[peerID] = common.ZKProof{
+	req.Proofs[peerID] = common.ZKProof{
 		ProofID:   proofID,
 		Proof:     proof,
 		Timestamp: time.Now().UnixNano(),
@@ -131,7 +126,7 @@ func (s *Storage) DeleteProvingRequest(requestID common.RequestID) error {
 
 	proverID := req.ProvingPeers[len(req.ProvingPeers)-1]
 	s.mu.RLock()
-	proof, ok := req.proofs[proverID]
+	proof, ok := req.Proofs[proverID]
 	s.mu.RUnlock()
 	if !ok {
 		return errors.New("no proof for the latest prover")
@@ -154,7 +149,7 @@ func (s *Storage) AddValidationSignature(requestID common.RequestID, peerID peer
 	req := s.provingRequests[requestID]
 	s.mu.RUnlock()
 
-	req.validationSignatures = append(req.validationSignatures, common.ValidationSignature{
+	req.ValidationSignatures = append(req.ValidationSignatures, common.ValidationSignature{
 		PeerID:    peerID,
 		Signature: signature,
 	})
@@ -174,5 +169,40 @@ func (s *Storage) GetValidationSignatures(requestID common.RequestID) ([]common.
 	req := s.provingRequests[requestID]
 	s.mu.RUnlock()
 
-	return req.validationSignatures, nil
+	return req.ValidationSignatures, nil
+}
+
+func (s *Storage) SetRequests(requests map[common.RequestID]common.RequestExtension) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.provingRequests = requests
+}
+
+func (s *Storage) SetLatestProofs(proofs map[string]common.ZKProof) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.latestProofs = proofs
+}
+
+func (s *Storage) GetStorageHash() (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	hasher := sha256.New()
+	b, err := common.GobEncodeMessage(s.provingRequests)
+	if err != nil {
+		return "", errors.Wrap(err, "error encoding proving requests")
+	}
+
+	hasher.Write(b)
+	b, err = common.GobEncodeMessage(s.latestProofs)
+	if err != nil {
+		return "", errors.Wrap(err, "error encoding latest proofs")
+	}
+
+	hasher.Write(b)
+
+	return base64.URLEncoding.EncodeToString(hasher.Sum(nil)), nil
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic/sync"
 	"github.com/dimazhornyk/generic-proving-network/internal/presenters"
 	"go.uber.org/fx"
 )
@@ -23,12 +24,14 @@ func buildApp() *fx.App {
 	return fx.New(
 		fx.Provide(
 			func() context.Context { return context.Background() },
-			common.NewConfig(),
+			common.NewConfig,
+			common.InitGobModels,
 			connectors.NewDocker,
 			connectors.NewPrivateKey,
 			connectors.NewHost,
 			connectors.NewEthereum,
 			logic.NewDHT,
+			logic.NewConnectionHolder,
 			logic.NewDiscovery,
 			handlers.NewProvingRequestsHandler,
 			handlers.NewVotingHandler,
@@ -39,19 +42,24 @@ func buildApp() *fx.App {
 			logic.NewNodesMap,
 			logic.NewStorage,
 			logic.NewService,
-			logic.NewInitialSyncer,
+			sync.NewInitialSyncer,
 			presenters.NewAPI,
 			presenters.NewListener,
 			// handles proofs generation, important for service to start first because it has to pull docker images
 			fx.Invoke(func(ctx context.Context, service *logic.Service) error {
 				return service.Start()
 			}),
-			fx.Invoke(func(ctx context.Context, syncer *logic.InitialSyncer) error {
+			// sync initial storage state
+			fx.Invoke(func(ctx context.Context, syncer *sync.InitialSyncer) error {
 				return syncer.Sync(ctx)
 			}),
 			// sends status updates
 			fx.Invoke(func(ctx context.Context, cfg *common.Config, messaging *logic.StatusSharing) error {
 				return messaging.Init(ctx, cfg.Consumers)
+			}),
+			// provides data for initial sync for others
+			fx.Invoke(func(ctx context.Context, syncer *sync.InitialSyncer) {
+				syncer.ProvideData(ctx)
 			}),
 			// listens to other's messages
 			fx.Invoke(func(ctx context.Context, listener *presenters.Listener) error { // others listener

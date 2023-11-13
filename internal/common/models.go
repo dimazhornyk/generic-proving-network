@@ -42,3 +42,10 @@ type ValidationSignature struct {
 	PeerID    peer.ID
 	Signature []byte
 }
+
+type RequestExtension struct {
+	ProvingRequestMessage
+	ProvingPeers         []peer.ID
+	Proofs               map[peer.ID]ZKProof
+	ValidationSignatures []ValidationSignature
+}
