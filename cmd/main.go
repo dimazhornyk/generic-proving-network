@@ -59,7 +59,7 @@ func buildApp() *fx.App {
 			}),
 			// provides data for initial sync for others
 			fx.Invoke(func(ctx context.Context, syncer *sync.InitialSyncer) {
-				syncer.ProvideData(ctx)
+				syncer.ProvideData()
 			}),
 			// listens to other's messages
 			fx.Invoke(func(ctx context.Context, listener *presenters.Listener) error { // others listener
