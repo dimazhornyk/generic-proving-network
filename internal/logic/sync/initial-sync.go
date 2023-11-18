@@ -142,7 +142,7 @@ func (is *InitialSyncer) checkStateChecksum(ctx context.Context, peers []peer.ID
 	ch := make(chan chanResp, len(streams))
 	for _, s := range streams {
 		s := s // avoid capturing loop variable
-		go is.listenForChecksum(s, ch)
+		go is.listenForStorageHash(s, ch)
 	}
 
 	for i := 0; i < len(streams); i++ {
@@ -160,7 +160,7 @@ func (is *InitialSyncer) checkStateChecksum(ctx context.Context, peers []peer.ID
 }
 
 func (is *InitialSyncer) requestHashes(streams []network.Stream) error {
-	msg := Message{Type: RequestChecksum}
+	msg := Message{Type: RequestStorageHash}
 	b, err := common.GobEncodeMessage(msg)
 	if err != nil {
 		return errors.Wrap(err, "error encoding a message")
@@ -181,7 +181,7 @@ func (is *InitialSyncer) requestHashes(streams []network.Stream) error {
 	return nil
 }
 
-func (is *InitialSyncer) listenForChecksum(stream network.Stream, ch chan chanResp) {
+func (is *InitialSyncer) listenForStorageHash(stream network.Stream, ch chan chanResp) {
 	reader := bufio.NewReader(stream)
 	jobResponse := chanResp{
 		peerID: stream.Conn().RemotePeer().String(),
@@ -189,7 +189,7 @@ func (is *InitialSyncer) listenForChecksum(stream network.Stream, ch chan chanRe
 
 	b, err := reader.ReadBytes(delim)
 	if err != nil {
-		jobResponse.err = errors.Wrap(err, "error reading checksum from a stream")
+		jobResponse.err = errors.Wrap(err, "error reading hash from a stream")
 		ch <- jobResponse
 
 		return
@@ -269,9 +269,9 @@ func (is *InitialSyncer) readLatestProofsData(r *bufio.Reader) error {
 	return nil
 }
 
-func (is *InitialSyncer) ProvideData(ctx context.Context) {
+func (is *InitialSyncer) ProvideData() {
 	is.host.SetStreamHandler(is.protocolID, func(stream network.Stream) {
-		slog.Info("new stream", slog.String("streamID", stream.ID()))
+		slog.Info("new stream", slog.String("peerID", stream.Conn().RemotePeer().String()))
 		rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
 
 		for {
@@ -282,13 +282,102 @@ func (is *InitialSyncer) ProvideData(ctx context.Context) {
 				return
 			}
 
+			var msg Message
+			if err := common.GobDecodeMessage(data, &msg); err != nil {
+				slog.Error("error decoding a message", slog.String("error", err.Error()))
+
+				return
+			}
+
+			switch msg.Type {
+			case InitSync:
+				err = is.shareStorage(rw)
+			case RequestStorageHash:
+				err = is.sendStorageHash(rw)
+			default:
+				slog.Error("unknown message type", slog.Int("type", int(msg.Type)))
+
+				return
+			}
+
+			if err != nil {
+				slog.Error("error sending a message", slog.String("error", err.Error()))
+
+				return
+			}
 		}
 	})
 }
 
-// TODO: negotiate case when there are no previously active nodes
+func (is *InitialSyncer) shareStorage(rw *bufio.ReadWriter) error {
+	requests := is.storage.GetRequests()
+	proofs := is.storage.GetLatestProofs()
 
-// retain pub/subs and handle ones that were delivered after the end of sync but before going out of sync mode
+	msg := Message{
+		Type:    SendData,
+		Payload: requests,
+	}
 
-// 1. create sync event at a timestamp, download everything that was stored before that timestamp and handle pub/subs
-// 2. check if the node is in sync
+	b, err := common.GobEncodeMessage(msg)
+	if err != nil {
+		return errors.Wrap(err, "error encoding a message")
+	}
+
+	b = append(b, delim)
+	if _, err := rw.Write(b); err != nil {
+		return errors.Wrap(err, "error writing to a stream")
+	}
+
+	if err := rw.Flush(); err != nil {
+		return errors.Wrap(err, "error flushing a stream")
+	}
+
+	msg = Message{
+		Type:    SendData,
+		Payload: proofs,
+	}
+
+	b, err = common.GobEncodeMessage(msg)
+	if err != nil {
+		return errors.Wrap(err, "error encoding a message")
+	}
+
+	b = append(b, delim)
+	if _, err := rw.Write(b); err != nil {
+		return errors.Wrap(err, "error writing to a stream")
+	}
+
+	if err := rw.Flush(); err != nil {
+		return errors.Wrap(err, "error flushing a stream")
+	}
+
+	return nil
+}
+
+func (is *InitialSyncer) sendStorageHash(rw *bufio.ReadWriter) error {
+	hash, err := is.storage.GetStorageHash()
+	if err != nil {
+		return errors.Wrap(err, "error getting storage hash")
+	}
+
+	msg := Message{
+		Type:    SendStorageHash,
+		Payload: hash,
+	}
+
+	b, err := common.GobEncodeMessage(msg)
+	if err != nil {
+		return errors.Wrap(err, "error encoding a message")
+	}
+
+	b = append(b, delim)
+	if _, err := rw.Write(b); err != nil {
+		return errors.Wrap(err, "error writing to a stream")
+	}
+
+	if err := rw.Flush(); err != nil {
+		return errors.Wrap(err, "error flushing a stream")
+	}
+
+	return nil
+}

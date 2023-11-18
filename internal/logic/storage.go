@@ -172,6 +172,20 @@ func (s *Storage) GetValidationSignatures(requestID common.RequestID) ([]common.
 	return req.ValidationSignatures, nil
 }
 
+func (s *Storage) GetRequests() map[common.RequestID]common.RequestExtension {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.provingRequests
+}
+
+func (s *Storage) GetLatestProofs() map[string]common.ZKProof {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.latestProofs
+}
+
 func (s *Storage) SetRequests(requests map[common.RequestID]common.RequestExtension) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

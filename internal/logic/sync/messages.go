@@ -5,8 +5,8 @@ type MessageType int
 const (
 	InitSync MessageType = iota
 	SendData
-	RequestChecksum
-	SendChecksum
+	RequestStorageHash
+	SendStorageHash
 )
 
 type Message struct {
