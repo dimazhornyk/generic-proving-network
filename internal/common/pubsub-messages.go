@@ -74,3 +74,9 @@ type ValidationPayload struct {
 	PoolSize            int       `json:"pool_size,omitempty"`
 	Signature           []byte    `json:"signature,omitempty"`
 }
+
+type DataToSign struct {
+	RequestID    RequestID `json:"request_id"`
+	ProverPubKey []byte    `json:"prover_pub_key"`
+	IsValid      bool      `json:"is_valid"`
+}
