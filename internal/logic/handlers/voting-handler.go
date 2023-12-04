@@ -2,16 +2,17 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/ecdsa"
 	"encoding/json"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic"
-	"github.com/libp2p/go-libp2p/core/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -25,7 +26,7 @@ var errCantVerifySignature = errors.New("can't verify signature")
 
 type VotingHandler struct {
 	host              host.Host
-	key               crypto.PrivKey
+	key               *ecdsa.PrivateKey
 	storage           *logic.Storage
 	service           *logic.Service
 	pubsub            *connectors.PubSub
@@ -34,7 +35,7 @@ type VotingHandler struct {
 	validationVotings logic.VotingMap[common.RequestID, bool]
 }
 
-func NewVotingHandler(host host.Host, key crypto.PrivKey, service *logic.Service, storage *logic.Storage, pubsub *connectors.PubSub, eth *connectors.Ethereum) *VotingHandler {
+func NewVotingHandler(host host.Host, key *ecdsa.PrivateKey, service *logic.Service, storage *logic.Storage, pubsub *connectors.PubSub, eth *connectors.Ethereum) *VotingHandler {
 	return &VotingHandler{
 		host:              host,
 		key:               key,
@@ -155,25 +156,20 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 }
 
 func (h *VotingHandler) checkValidationSignature(voterID peer.ID, payload common.ValidationPayload) error {
-	proverPublicKey, err := payload.ProverID.ExtractPublicKey()
+	validatorAddr, err := common.PeerIDToEthAddress(voterID)
 	if err != nil {
-		return errors.Wrap(err, "error extracting public key")
+		return errors.Wrap(err, "error converting peer ID to eth address")
 	}
 
-	proverPubKeyBytes, err := proverPublicKey.Raw()
+	proverAddr, err := common.PeerIDToEthAddress(payload.ProverID)
 	if err != nil {
-		return errors.Wrap(err, "error getting raw public key")
-	}
-
-	validatorPubKey, err := voterID.ExtractPublicKey()
-	if err != nil {
-		return errors.Wrap(err, "error extracting public key")
+		return errors.Wrap(err, "error converting peer ID to eth address")
 	}
 
 	dataToSign := common.DataToSign{
-		RequestID:    payload.RequestID,
-		ProverPubKey: proverPubKeyBytes,
-		IsValid:      payload.IsValid,
+		RequestID:     payload.RequestID,
+		ProverAddress: proverAddr,
+		IsValid:       payload.IsValid,
 	}
 
 	b, err := json.Marshal(dataToSign)
@@ -181,16 +177,13 @@ func (h *VotingHandler) checkValidationSignature(voterID peer.ID, payload common
 		return errors.Wrap(err, "error marshaling a message")
 	}
 
-	hasher := sha256.New()
-	hasher.Write(b)
-	hash := hasher.Sum(nil)
-
-	valid, err := validatorPubKey.Verify(hash, payload.Signature)
+	hash := ethCrypto.Keccak256Hash(b)
+	addr, err := ethCrypto.SigToPub(hash.Bytes(), payload.Signature)
 	if err != nil {
-		return errCantVerifySignature
+		return errors.Wrap(err, "error converting signature to public key")
 	}
 
-	if !valid {
+	if !strings.EqualFold(ethCrypto.PubkeyToAddress(*addr).Hex(), validatorAddr) {
 		return errInvalidSignature
 	}
 

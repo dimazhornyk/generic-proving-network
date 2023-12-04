@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/ecdsa"
 	"encoding/json"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic"
-	"github.com/libp2p/go-libp2p/core/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -21,10 +21,10 @@ type ProofsHandler struct {
 	storage  *logic.Storage
 	service  *logic.Service
 	pubsub   *connectors.PubSub
-	key      crypto.PrivKey
+	key      *ecdsa.PrivateKey
 }
 
-func NewProofsHandler(key crypto.PrivKey, host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub, nodesMap logic.NodesMap) *ProofsHandler {
+func NewProofsHandler(key *ecdsa.PrivateKey, host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub, nodesMap logic.NodesMap) *ProofsHandler {
 	return &ProofsHandler{
 		host:     host,
 		storage:  storage,
@@ -91,20 +91,15 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 }
 
 func (h *ProofsHandler) getSignature(requestID common.RequestID, peerID peer.ID, isValid bool) ([]byte, error) {
-	publicKey, err := peerID.ExtractPublicKey()
+	addr, err := common.PeerIDToEthAddress(peerID)
 	if err != nil {
-		return nil, errors.Wrap(err, "error extracting public key")
-	}
-
-	pubKeyBytes, err := publicKey.Raw()
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting raw public key")
+		return nil, errors.Wrap(err, "error converting peer ID to eth address")
 	}
 
 	dataToSign := common.DataToSign{
-		RequestID:    requestID,
-		ProverPubKey: pubKeyBytes,
-		IsValid:      isValid,
+		RequestID:     requestID,
+		ProverAddress: addr,
+		IsValid:       isValid,
 	}
 
 	b, err := json.Marshal(dataToSign)
@@ -112,9 +107,11 @@ func (h *ProofsHandler) getSignature(requestID common.RequestID, peerID peer.ID,
 		return nil, errors.Wrap(err, "error marshaling a message")
 	}
 
-	hasher := sha256.New()
-	hasher.Write(b)
-	hash := hasher.Sum(nil)
+	hash := ethCrypto.Keccak256Hash(b)
+	sig, err := ethCrypto.Sign(hash.Bytes(), h.key)
+	if err != nil {
+		panic(err)
+	}
 
-	return h.key.Sign(hash)
+	return sig, nil
 }

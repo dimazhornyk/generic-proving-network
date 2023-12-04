@@ -76,7 +76,7 @@ type ValidationPayload struct {
 }
 
 type DataToSign struct {
-	RequestID    RequestID `json:"request_id"`
-	ProverPubKey []byte    `json:"prover_pub_key"`
-	IsValid      bool      `json:"is_valid"`
+	RequestID     RequestID `json:"request_id"`
+	ProverAddress string    `json:"prover_address"`
+	IsValid       bool      `json:"is_valid"`
 }
