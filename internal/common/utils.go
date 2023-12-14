@@ -79,14 +79,10 @@ func PeerIDToEthAddress(peerID peer.ID) (string, error) {
 	return "0x" + hex.EncodeToString(keccak[len(keccak)-20:]), nil
 }
 
-func GetRSV(signature []byte) (string, string, int, error) {
+func GetRSV(signature []byte) ([32]byte, [32]byte, uint8, error) {
 	if len(signature) != 65 {
-		return "", "", 0, errors.New("wrong signature length")
+		return [32]byte{}, [32]byte{}, 0, errors.New("wrong signature length")
 	}
 
-	r := "0x" + hex.EncodeToString(signature[:32])
-	s := "0x" + hex.EncodeToString(signature[32:64])
-	v := int(27 + signature[64])
-
-	return r, s, v, nil
+	return [32]byte(signature[:32]), [32]byte(signature[32:64]), 27 + signature[64], nil
 }

@@ -11,7 +11,6 @@ func InitGobModels() {
 	gob.Register(ProvingRequestMessage{})
 	gob.Register(ZKProof{})
 	gob.Register(RequestExtension{})
-	gob.Register(ValidationSignature{})
 }
 
 func GobEncodeMessage(msg any) ([]byte, error) {

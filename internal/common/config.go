@@ -13,7 +13,7 @@ type Config struct {
 	PrivateKeyPath  string          `env:"PRIVATE_KEY_PATH" envDefault:"/app/keys/priv.key"`
 	ContractAddress string          `env:"CONTRACT_ADDRESS" envDefault:"0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e"`
 	Port            string          `env:"PORT" envDefault:"0"`
-	Consumers       []string        `env:"CONSUMERS" envDefault:"zksync-prover,scroll-prover"`
+	Consumers       []string        `env:"CONSUMERS" envDefault:"matterlabs/prover,scroll-tech/scroll-prover"`
 }
 
 func NewConfig() (*Config, error) {

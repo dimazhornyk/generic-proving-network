@@ -67,7 +67,7 @@ func (s *Storage) SaveRequest(data common.ProvingRequestMessage) error {
 		ProvingRequestMessage: data,
 		ProvingPeers:          make([]peer.ID, 0),
 		Proofs:                make(map[peer.ID]common.ZKProof),
-		ValidationSignatures:  make([]common.ValidationSignature, 0),
+		ValidationSignatures:  make([][]byte, 0),
 	}
 	s.mu.Unlock()
 
@@ -149,10 +149,7 @@ func (s *Storage) AddValidationSignature(requestID common.RequestID, peerID peer
 	req := s.provingRequests[requestID]
 	s.mu.RUnlock()
 
-	req.ValidationSignatures = append(req.ValidationSignatures, common.ValidationSignature{
-		PeerID:    peerID,
-		Signature: signature,
-	})
+	req.ValidationSignatures = append(req.ValidationSignatures, signature)
 	s.mu.Lock()
 	s.provingRequests[requestID] = req
 	s.mu.Unlock()
@@ -160,7 +157,7 @@ func (s *Storage) AddValidationSignature(requestID common.RequestID, peerID peer
 	return nil
 }
 
-func (s *Storage) GetValidationSignatures(requestID common.RequestID) ([]common.ValidationSignature, error) {
+func (s *Storage) GetValidationSignatures(requestID common.RequestID) ([][]byte, error) {
 	if !s.HasRequest(requestID) {
 		return nil, errUnknownRequest
 	}

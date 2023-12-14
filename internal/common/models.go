@@ -1,6 +1,10 @@
 package common
 
-import "github.com/libp2p/go-libp2p/core/peer"
+import (
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"math/big"
+)
 
 type CalculateProofRequest struct {
 	ID              string
@@ -34,7 +38,8 @@ type Container struct {
 
 type Consumer struct {
 	Name    string
-	Address string
+	Address ethcommon.Address
+	Balance *big.Int
 	Image   string
 }
 
@@ -47,5 +52,5 @@ type RequestExtension struct {
 	ProvingRequestMessage
 	ProvingPeers         []peer.ID
 	Proofs               map[peer.ID]ZKProof
-	ValidationSignatures []ValidationSignature
+	ValidationSignatures [][]byte
 }

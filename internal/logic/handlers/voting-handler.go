@@ -102,7 +102,8 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 		return errors.New("invalid payload type for VoteValidation")
 	}
 
-	if !h.storage.HasRequest(payload.RequestID) {
+	request, err := h.storage.GetProvingRequestByID(payload.RequestID)
+	if err != nil {
 		return errors.New("unknown requestID")
 	}
 
@@ -143,7 +144,7 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 		}
 
 		// TODO: optimize by batching the signatures
-		if err := h.ethereum.SubmitValidationSignatures(ctx, payload.RequestID, signatures, true); err != nil {
+		if err := h.ethereum.SubmitValidationSignatures(ctx, request.ProvingRequestMessage, signatures, true); err != nil {
 			return errors.Wrap(err, "error submitting validation signatures")
 		}
 
@@ -178,12 +179,12 @@ func (h *VotingHandler) checkValidationSignature(voterID peer.ID, payload common
 	}
 
 	hash := ethCrypto.Keccak256Hash(b)
-	addr, err := ethCrypto.SigToPub(hash.Bytes(), payload.Signature)
+	pub, err := ethCrypto.SigToPub(hash.Bytes(), payload.Signature)
 	if err != nil {
 		return errors.Wrap(err, "error converting signature to public key")
 	}
 
-	if !strings.EqualFold(ethCrypto.PubkeyToAddress(*addr).Hex(), validatorAddr) {
+	if !strings.EqualFold(ethCrypto.PubkeyToAddress(*pub).Hex(), validatorAddr[2:]) {
 		return errInvalidSignature
 	}
 

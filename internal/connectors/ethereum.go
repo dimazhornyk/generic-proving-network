@@ -2,83 +2,114 @@ package connectors
 
 import (
 	"context"
+	"crypto/ecdsa"
+	gpn "github.com/dimazhornyk/generic-proving-network/internal/abi"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
-	"math/big"
+	"log/slog"
 	"strings"
 )
 
 type Ethereum struct {
-	contractAddress ethcommon.Address
-	client          *ethclient.Client
+	address   ethcommon.Address
+	client    *gpn.ProvingNetwork
+	ethClient *ethclient.Client
 }
 
-func NewEthereum(cfg *common.Config) (*Ethereum, error) {
-	client, err := ethclient.Dial("https://sepolia.infura.io/v3/8c2d91ab6e0d476f9ea87f5e19ea6fb7")
+func NewEthereum(cfg *common.Config, privateKey *ecdsa.PrivateKey) (*Ethereum, error) {
+	ethClient, err := ethclient.Dial("https://sepolia.infura.io/v3/8c2d91ab6e0d476f9ea87f5e19ea6fb7")
+	if err != nil {
+		return nil, err
+	}
+
+	contractAddr := ethcommon.HexToAddress(cfg.ContractAddress)
+	client, err := gpn.NewProvingNetwork(contractAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Ethereum{
-		client:          client,
-		contractAddress: ethcommon.HexToAddress(cfg.ContractAddress),
+		address:   ethCrypto.PubkeyToAddress(privateKey.PublicKey),
+		client:    client,
+		ethClient: ethClient,
 	}, nil
 }
 
 func (e *Ethereum) GetAllConsumers(ctx context.Context) ([]common.Consumer, error) {
-	e.client.CallContract(ctx, ethereum.CallMsg{
-		To: &e.contractAddress,
-	}, nil)
+	opts := &bind.CallOpts{
+		Context: ctx,
+		From:    e.address,
+	}
 
-	// TODO: finish and test
-	position := 0
-	arraySlot := e.getArraySlot(position)
-	vf := crypto.Keccak256Hash(arraySlot[:])
-
-	offset := new(big.Int).SetInt64(int64(position - 1))
-	v := new(big.Int).SetBytes(vf[:])
-	v.Add(v, offset)
-
-	slot := ethcommon.BytesToHash(v.Bytes())
-	resp, err := e.client.StorageAt(ctx, e.contractAddress, slot, nil)
+	consumers, err := e.client.GetConsumers(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	hexutil.Encode(resp)
-	res := make([]common.Consumer, 0)
-	addresses := make([]string, 0) // TODO: get the addresses from a contract
-	for _, addr := range addresses {
-		// TODO: get image from map inside the contract
-		var image = ""
-		fragments := strings.Split(image, "/")
-		if len(fragments) < 2 {
-			return nil, errors.New("invalid image format")
-		}
-
-		res = append(res, common.Consumer{
-			Image:   image,
-			Address: addr,
-			Name:    strings.Split(fragments[1], ":")[0],
+	var result []common.Consumer
+	for _, consumer := range consumers {
+		result = append(result, common.Consumer{
+			Image:   consumer.ContainerName,
+			Address: consumer.Addr,
+			Balance: consumer.Balance,
+			Name:    strings.Split(consumer.ContainerName, ":")[0], // remove image tag
 		})
 	}
 
-	return res, nil
+	return result, nil
 }
 
-func (e *Ethereum) SubmitValidationSignatures(ctx context.Context, requestID common.RequestID, signatures []common.ValidationSignature, success bool) error {
-	// TODO: implement
+func (e *Ethereum) GetAllProvers(ctx context.Context) ([]gpn.NetworkProverView, error) {
+	opts := &bind.CallOpts{
+		Context: ctx,
+		From:    e.address,
+	}
+
+	return e.client.GetProvers(opts)
+}
+
+func (e *Ethereum) SubmitValidationSignatures(ctx context.Context, request common.ProvingRequestMessage, signatures [][]byte) error {
+	if len(signatures) == 0 {
+		return errors.New("no signatures provided")
+	}
+
+	opts := &bind.TransactOpts{
+		Context: ctx,
+		From:    e.address,
+	}
+
+	var err error
+	rs := make([][32]byte, len(signatures)+1)
+	ss := make([][32]byte, len(signatures)+1)
+	vs := make([]uint8, len(signatures)+1)
+
+	rs[0], ss[0], vs[0], err = common.GetRSV(request.Signature)
+	if err != nil {
+		return errors.Wrap(err, "error getting RSV of the consumer's signature")
+	}
+
+	for i, signature := range signatures {
+		rs[i+1], ss[i+1], vs[i+1], err = common.GetRSV(signature)
+		if err != nil {
+			return errors.Wrap(err, "error getting RSV of the validator's signature")
+		}
+	}
+
+	tx, err := e.client.SubmitSignedProof(opts, request.ID, &request.Reward, rs, ss, vs)
+	if err != nil {
+		return errors.Wrap(err, "error submitting signed proof")
+	}
+
+	receipt, err := bind.WaitMined(ctx, e.ethClient, tx)
+	if err != nil {
+		return errors.Wrap(err, "error waiting for the transaction to be mined")
+	}
+
+	slog.Info("Transaction mined", "tx", receipt.TxHash.String(), "status", receipt.Status)
+
 	return nil
-}
-
-func (e *Ethereum) getArraySlot(position int) [32]byte {
-	return crypto.Keccak256Hash(
-		ethcommon.LeftPadBytes(e.contractAddress[:], 32),
-		ethcommon.LeftPadBytes(big.NewInt(int64(position)).Bytes(), 32),
-	)
 }
