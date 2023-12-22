@@ -6,7 +6,7 @@ import (
 	"math/big"
 )
 
-type CalculateProofRequest struct {
+type ComputeProofRequest struct {
 	ID              string
 	ConsumerName    string
 	ConsumerAddress string
@@ -52,5 +52,5 @@ type RequestExtension struct {
 	ProvingRequestMessage
 	ProvingPeers         []peer.ID
 	Proofs               map[peer.ID]ZKProof
-	ValidationSignatures [][]byte
+	ValidationSignatures map[peer.ID]map[peer.ID][]byte // proving peer ID -> validation peer ID -> validation signature
 }

@@ -19,7 +19,7 @@ import (
 const maxProvingAttempts = 3
 const DoubleCheckInterval = time.Second * 2
 const SelectionVotingDuration = time.Second * 4
-const ValidationVotingDuration = time.Second * 6
+const ValidationVotingDuration = time.Second * 30
 
 var errInvalidSignature = errors.New("invalid signature")
 var errCantVerifySignature = errors.New("can't verify signature")
@@ -117,7 +117,7 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 		return errors.Wrap(err, "wrong validation signature")
 	}
 
-	if err := h.storage.AddValidationSignature(payload.RequestID, voterID, payload.Signature); err != nil {
+	if err := h.storage.AddValidationSignature(payload.RequestID, voterID, payload.ProverID, payload.Signature); err != nil {
 		return errors.Wrap(err, "error adding validation signature")
 	}
 
@@ -138,13 +138,13 @@ func (h *VotingHandler) handleValidationVoting(ctx context.Context, voterID peer
 			return h.handleInvalidProof(ctx, payload.RequestID)
 		}
 
-		signatures, err := h.storage.GetValidationSignatures(payload.RequestID)
+		signatures, err := h.storage.GetValidationSignatures(payload.RequestID, payload.ProverID)
 		if err != nil {
 			return errors.Wrap(err, "error getting validation signatures")
 		}
 
 		// TODO: optimize by batching the signatures
-		if err := h.ethereum.SubmitValidationSignatures(ctx, request.ProvingRequestMessage, signatures, true); err != nil {
+		if err := h.ethereum.SubmitValidationSignatures(ctx, request.ProvingRequestMessage, signatures); err != nil {
 			return errors.Wrap(err, "error submitting validation signatures")
 		}
 

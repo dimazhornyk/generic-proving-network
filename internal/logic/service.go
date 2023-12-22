@@ -22,6 +22,8 @@ import (
 const proveURL = "http://localhost:%s/prove"
 const validateURL = "http://localhost:%s/validate"
 
+var ErrNoProof = errors.New("no proof found")
+
 type Service struct {
 	docker    *connectors.Docker
 	pubsub    *connectors.PubSub
@@ -69,7 +71,7 @@ func (s *Service) Start() error {
 	return nil
 }
 
-func (s *Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]byte, error) {
+func (s *Service) InitiateProofCalculation(ctx context.Context, req common.ComputeProofRequest) error {
 	msg := common.ProvingRequestMessage{
 		ID:              req.ID,
 		ConsumerName:    req.ConsumerName,
@@ -79,12 +81,22 @@ func (s *Service) InitiateProofCalculation(req common.CalculateProofRequest) ([]
 		Timestamp:       time.Now().UnixNano(),
 	}
 
-	if err := s.pubsub.Publish(context.Background(), common.RequestsTopic, msg); err != nil {
-		return nil, errors.Wrap(err, "error publishing the proving request")
+	if err := s.pubsub.Publish(ctx, common.RequestsTopic, msg); err != nil {
+		return errors.Wrap(err, "error publishing the proving request")
 	}
 
-	// TODO: wait till the proving finalization and respond (or make API async so client would poll for response)
-	return nil, nil
+	return nil
+}
+
+func (s *Service) GetProof(requestID common.RequestID) (common.ZKProof, error) {
+	proof, err := s.storage.GetFromResultsStorage(requestID)
+	if err != nil {
+		slog.Warn("no proof in storage", slog.String("requestID", requestID))
+
+		return common.ZKProof{}, ErrNoProof
+	}
+
+	return proof, nil
 }
 
 func (s *Service) HandleProverSelection(ctx context.Context, msg common.ProvingRequestMessage, excludedPeers ...peer.ID) error {

@@ -12,7 +12,9 @@ import (
 
 var errUnknownRequest = errors.New("unknown request")
 
+// inmemory storage is a temporary solution, it should be replaced with a more persistent storage
 type Storage struct {
+	resultsStorage  map[common.RequestID]common.ZKProof // TODO: implement properly, use disk
 	latestProofs    map[string]common.ZKProof
 	provingRequests map[common.RequestID]common.RequestExtension
 	mu              sync.RWMutex
@@ -51,8 +53,9 @@ func (s *Storage) GetProvingRequestByID(requestID common.RequestID) (common.Requ
 
 func (s *Storage) HasRequest(requestID common.RequestID) bool {
 	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	_, ok := s.provingRequests[requestID]
-	s.mu.RUnlock()
 
 	return ok
 }
@@ -67,7 +70,7 @@ func (s *Storage) SaveRequest(data common.ProvingRequestMessage) error {
 		ProvingRequestMessage: data,
 		ProvingPeers:          make([]peer.ID, 0),
 		Proofs:                make(map[peer.ID]common.ZKProof),
-		ValidationSignatures:  make([][]byte, 0),
+		ValidationSignatures:  make(map[peer.ID]map[peer.ID][]byte),
 	}
 	s.mu.Unlock()
 
@@ -133,6 +136,7 @@ func (s *Storage) DeleteProvingRequest(requestID common.RequestID) error {
 	}
 
 	s.mu.Lock()
+	s.resultsStorage[requestID] = proof
 	s.latestProofs[req.ConsumerName] = proof
 	delete(s.provingRequests, requestID)
 	s.mu.Unlock()
@@ -140,33 +144,50 @@ func (s *Storage) DeleteProvingRequest(requestID common.RequestID) error {
 	return nil
 }
 
-func (s *Storage) AddValidationSignature(requestID common.RequestID, peerID peer.ID, signature []byte) error {
+func (s *Storage) GetFromResultsStorage(request common.RequestID) (common.ZKProof, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	proof, ok := s.resultsStorage[request]
+	if !ok {
+		return common.ZKProof{}, errors.New("no proof in the results storage")
+	}
+
+	return proof, nil
+}
+
+func (s *Storage) AddValidationSignature(requestID common.RequestID, voterID, proverID peer.ID, signature []byte) error {
 	if !s.HasRequest(requestID) {
 		return errUnknownRequest
 	}
 
-	s.mu.RLock()
-	req := s.provingRequests[requestID]
-	s.mu.RUnlock()
-
-	req.ValidationSignatures = append(req.ValidationSignatures, signature)
 	s.mu.Lock()
-	s.provingRequests[requestID] = req
+	req := s.provingRequests[requestID]
+	if _, ok := req.ValidationSignatures[proverID]; !ok {
+		req.ValidationSignatures[proverID] = make(map[peer.ID][]byte)
+	}
+
+	req.ValidationSignatures[proverID][voterID] = signature
 	s.mu.Unlock()
 
 	return nil
 }
 
-func (s *Storage) GetValidationSignatures(requestID common.RequestID) ([][]byte, error) {
+func (s *Storage) GetValidationSignatures(requestID common.RequestID, proverID peer.ID) ([][]byte, error) {
 	if !s.HasRequest(requestID) {
 		return nil, errUnknownRequest
 	}
 
+	res := make([][]byte, 0)
 	s.mu.RLock()
-	req := s.provingRequests[requestID]
-	s.mu.RUnlock()
+	defer s.mu.RUnlock()
 
-	return req.ValidationSignatures, nil
+	req := s.provingRequests[requestID]
+	for _, signature := range req.ValidationSignatures[proverID] {
+		res = append(res, signature)
+	}
+
+	return res, nil
 }
 
 func (s *Storage) GetRequests() map[common.RequestID]common.RequestExtension {

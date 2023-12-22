@@ -87,6 +87,7 @@ func (e *Ethereum) SubmitValidationSignatures(ctx context.Context, request commo
 	ss := make([][32]byte, len(signatures)+1)
 	vs := make([]uint8, len(signatures)+1)
 
+	// consumer's signature is a first element in the signatures array
 	rs[0], ss[0], vs[0], err = common.GetRSV(request.Signature)
 	if err != nil {
 		return errors.Wrap(err, "error getting RSV of the consumer's signature")

@@ -8,6 +8,7 @@ import (
 var errUnknownVotingKey = errors.New("unknown request")
 var errVotingHasDrawn = errors.New("voting has drawn")
 
+// inmemory voting is a temporary solution, it should be replaced with a more persistent approach
 type Voting[K, V comparable] struct {
 	VotingKey K
 	Votes     map[peer.ID]V
