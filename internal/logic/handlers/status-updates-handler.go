@@ -9,10 +9,10 @@ import (
 )
 
 type StatusUpdatesHandler struct {
-	nodes logic.NodesMap
+	nodes logic.StatusMap
 }
 
-func NewStatusUpdatesHandler(nodes logic.NodesMap) *StatusUpdatesHandler {
+func NewStatusUpdatesHandler(nodes logic.StatusMap) *StatusUpdatesHandler {
 	return &StatusUpdatesHandler{
 		nodes: nodes,
 	}

@@ -36,15 +36,9 @@ type NetworkConsumerView struct {
 	ContainerName string
 }
 
-// NetworkProverView is an auto generated low-level Go binding around an user-defined struct.
-type NetworkProverView struct {
-	Addr    common.Address
-	Balance *big.Int
-}
-
 // ProvingNetworkMetaData contains all meta data concerning the ProvingNetwork contract.
 var ProvingNetworkMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"depositEth\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_containerName\",\"type\":\"string\"}],\"name\":\"registerConsumer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerProver\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"StringsInsufficientHexLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"requestId\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"rs\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"ss\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint8[]\",\"name\":\"vs\",\"type\":\"uint8[]\"}],\"name\":\"submitSignedProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawConsumer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"consumerAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"consumers\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"containerName\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getConsumers\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"containerName\",\"type\":\"string\"}],\"internalType\":\"structNetwork.ConsumerView[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProvers\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"internalType\":\"structNetwork.ProverView[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_ETH_AMOUNT_CONSUMER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_ETH_AMOUNT_PROVER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"payoutRequestIds\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"payouts\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"consumer\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"claimableAfterTimestamp\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"proverAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"provers\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"StringsInsufficientHexLength\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isAdded\",\"type\":\"bool\"}],\"name\":\"ProverUpdate\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MIN_ETH_AMOUNT_CONSUMER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_ETH_AMOUNT_PROVER\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"consumerAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"consumers\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"containerName\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositEth\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getConsumers\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"containerName\",\"type\":\"string\"}],\"internalType\":\"structNetwork.ConsumerView[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProvers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"payoutRequestIds\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"payouts\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"consumer\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"claimableAfterTimestamp\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"proverAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"provers\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_containerName\",\"type\":\"string\"}],\"name\":\"registerConsumer\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registerProver\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"requestId\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"reward\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[]\",\"name\":\"rs\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"ss\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint8[]\",\"name\":\"vs\",\"type\":\"uint8[]\"}],\"name\":\"submitSignedProof\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawConsumer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawProver\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawRewards\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // ProvingNetworkABI is the input ABI used to generate the binding from.
@@ -364,16 +358,16 @@ func (_ProvingNetwork *ProvingNetworkCallerSession) GetConsumers() ([]NetworkCon
 
 // GetProvers is a free data retrieval call binding the contract method 0xc0bfd036.
 //
-// Solidity: function getProvers() view returns((address,uint256)[])
-func (_ProvingNetwork *ProvingNetworkCaller) GetProvers(opts *bind.CallOpts) ([]NetworkProverView, error) {
+// Solidity: function getProvers() view returns(address[])
+func (_ProvingNetwork *ProvingNetworkCaller) GetProvers(opts *bind.CallOpts) ([]common.Address, error) {
 	var out []interface{}
 	err := _ProvingNetwork.contract.Call(opts, &out, "getProvers")
 
 	if err != nil {
-		return *new([]NetworkProverView), err
+		return *new([]common.Address), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new([]NetworkProverView)).(*[]NetworkProverView)
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
 
@@ -381,15 +375,15 @@ func (_ProvingNetwork *ProvingNetworkCaller) GetProvers(opts *bind.CallOpts) ([]
 
 // GetProvers is a free data retrieval call binding the contract method 0xc0bfd036.
 //
-// Solidity: function getProvers() view returns((address,uint256)[])
-func (_ProvingNetwork *ProvingNetworkSession) GetProvers() ([]NetworkProverView, error) {
+// Solidity: function getProvers() view returns(address[])
+func (_ProvingNetwork *ProvingNetworkSession) GetProvers() ([]common.Address, error) {
 	return _ProvingNetwork.Contract.GetProvers(&_ProvingNetwork.CallOpts)
 }
 
 // GetProvers is a free data retrieval call binding the contract method 0xc0bfd036.
 //
-// Solidity: function getProvers() view returns((address,uint256)[])
-func (_ProvingNetwork *ProvingNetworkCallerSession) GetProvers() ([]NetworkProverView, error) {
+// Solidity: function getProvers() view returns(address[])
+func (_ProvingNetwork *ProvingNetworkCallerSession) GetProvers() ([]common.Address, error) {
 	return _ProvingNetwork.Contract.GetProvers(&_ProvingNetwork.CallOpts)
 }
 
@@ -634,4 +628,181 @@ func (_ProvingNetwork *ProvingNetworkSession) WithdrawConsumer() (*types.Transac
 // Solidity: function withdrawConsumer() returns()
 func (_ProvingNetwork *ProvingNetworkTransactorSession) WithdrawConsumer() (*types.Transaction, error) {
 	return _ProvingNetwork.Contract.WithdrawConsumer(&_ProvingNetwork.TransactOpts)
+}
+
+// WithdrawProver is a paid mutator transaction binding the contract method 0x23742142.
+//
+// Solidity: function withdrawProver() returns()
+func (_ProvingNetwork *ProvingNetworkTransactor) WithdrawProver(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ProvingNetwork.contract.Transact(opts, "withdrawProver")
+}
+
+// WithdrawProver is a paid mutator transaction binding the contract method 0x23742142.
+//
+// Solidity: function withdrawProver() returns()
+func (_ProvingNetwork *ProvingNetworkSession) WithdrawProver() (*types.Transaction, error) {
+	return _ProvingNetwork.Contract.WithdrawProver(&_ProvingNetwork.TransactOpts)
+}
+
+// WithdrawProver is a paid mutator transaction binding the contract method 0x23742142.
+//
+// Solidity: function withdrawProver() returns()
+func (_ProvingNetwork *ProvingNetworkTransactorSession) WithdrawProver() (*types.Transaction, error) {
+	return _ProvingNetwork.Contract.WithdrawProver(&_ProvingNetwork.TransactOpts)
+}
+
+// WithdrawRewards is a paid mutator transaction binding the contract method 0xc7b8981c.
+//
+// Solidity: function withdrawRewards() returns()
+func (_ProvingNetwork *ProvingNetworkTransactor) WithdrawRewards(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ProvingNetwork.contract.Transact(opts, "withdrawRewards")
+}
+
+// WithdrawRewards is a paid mutator transaction binding the contract method 0xc7b8981c.
+//
+// Solidity: function withdrawRewards() returns()
+func (_ProvingNetwork *ProvingNetworkSession) WithdrawRewards() (*types.Transaction, error) {
+	return _ProvingNetwork.Contract.WithdrawRewards(&_ProvingNetwork.TransactOpts)
+}
+
+// WithdrawRewards is a paid mutator transaction binding the contract method 0xc7b8981c.
+//
+// Solidity: function withdrawRewards() returns()
+func (_ProvingNetwork *ProvingNetworkTransactorSession) WithdrawRewards() (*types.Transaction, error) {
+	return _ProvingNetwork.Contract.WithdrawRewards(&_ProvingNetwork.TransactOpts)
+}
+
+// ProvingNetworkProverUpdateIterator is returned from FilterProverUpdate and is used to iterate over the raw logs and unpacked data for ProverUpdate events raised by the ProvingNetwork contract.
+type ProvingNetworkProverUpdateIterator struct {
+	Event *ProvingNetworkProverUpdate // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ProvingNetworkProverUpdateIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ProvingNetworkProverUpdate)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ProvingNetworkProverUpdate)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ProvingNetworkProverUpdateIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ProvingNetworkProverUpdateIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ProvingNetworkProverUpdate represents a ProverUpdate event raised by the ProvingNetwork contract.
+type ProvingNetworkProverUpdate struct {
+	Addr    common.Address
+	IsAdded bool
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterProverUpdate is a free log retrieval operation binding the contract event 0xf385e4ca045e45c251712bb5fa5da5b8cfa28f9d1ccb4071304b3ac7dd5929e1.
+//
+// Solidity: event ProverUpdate(address addr, bool isAdded)
+func (_ProvingNetwork *ProvingNetworkFilterer) FilterProverUpdate(opts *bind.FilterOpts) (*ProvingNetworkProverUpdateIterator, error) {
+
+	logs, sub, err := _ProvingNetwork.contract.FilterLogs(opts, "ProverUpdate")
+	if err != nil {
+		return nil, err
+	}
+	return &ProvingNetworkProverUpdateIterator{contract: _ProvingNetwork.contract, event: "ProverUpdate", logs: logs, sub: sub}, nil
+}
+
+// WatchProverUpdate is a free log subscription operation binding the contract event 0xf385e4ca045e45c251712bb5fa5da5b8cfa28f9d1ccb4071304b3ac7dd5929e1.
+//
+// Solidity: event ProverUpdate(address addr, bool isAdded)
+func (_ProvingNetwork *ProvingNetworkFilterer) WatchProverUpdate(opts *bind.WatchOpts, sink chan<- *ProvingNetworkProverUpdate) (event.Subscription, error) {
+
+	logs, sub, err := _ProvingNetwork.contract.WatchLogs(opts, "ProverUpdate")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ProvingNetworkProverUpdate)
+				if err := _ProvingNetwork.contract.UnpackLog(event, "ProverUpdate", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseProverUpdate is a log parse operation binding the contract event 0xf385e4ca045e45c251712bb5fa5da5b8cfa28f9d1ccb4071304b3ac7dd5929e1.
+//
+// Solidity: event ProverUpdate(address addr, bool isAdded)
+func (_ProvingNetwork *ProvingNetworkFilterer) ParseProverUpdate(log types.Log) (*ProvingNetworkProverUpdate, error) {
+	event := new(ProvingNetworkProverUpdate)
+	if err := _ProvingNetwork.contract.UnpackLog(event, "ProverUpdate", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }

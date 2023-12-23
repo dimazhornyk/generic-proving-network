@@ -17,14 +17,14 @@ import (
 
 type ProofsHandler struct {
 	host     host.Host
-	nodesMap logic.NodesMap
+	nodesMap logic.StatusMap
 	storage  *logic.Storage
 	service  *logic.Service
 	pubsub   *connectors.PubSub
 	key      *ecdsa.PrivateKey
 }
 
-func NewProofsHandler(key *ecdsa.PrivateKey, host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub, nodesMap logic.NodesMap) *ProofsHandler {
+func NewProofsHandler(key *ecdsa.PrivateKey, host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub, nodesMap logic.StatusMap) *ProofsHandler {
 	return &ProofsHandler{
 		host:     host,
 		storage:  storage,
@@ -53,7 +53,7 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		return
 	}
 
-	// TODO: check if the node's status was Proving
+	// TODO: check if the node's status was Proving, so the state transition was correct
 
 	valid, err := h.service.ValidateProof(msg.RequestID, reqData.ConsumerName, reqData.Data, msg.Proof)
 	if err != nil {
@@ -74,7 +74,6 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 		ProverID:            peerID,
 		IsValid:             valid,
 		Signature:           signature,
-		PoolSize:            h.nodesMap.CountNodesForConsumer(reqData.ConsumerName),
 		ValidationTimestamp: time.Now().UnixNano(),
 	}
 

@@ -63,13 +63,32 @@ func (e *Ethereum) GetAllConsumers(ctx context.Context) ([]common.Consumer, erro
 	return result, nil
 }
 
-func (e *Ethereum) GetAllProvers(ctx context.Context) ([]gpn.NetworkProverView, error) {
+func (e *Ethereum) GetAllProvers(ctx context.Context) ([]ethcommon.Address, error) {
 	opts := &bind.CallOpts{
 		Context: ctx,
 		From:    e.address,
 	}
 
 	return e.client.GetProvers(opts)
+}
+
+func (e *Ethereum) ListenForNewProvers(ctx context.Context) (<-chan *gpn.ProvingNetworkProverUpdate, error) {
+	opts := &bind.WatchOpts{
+		Context: ctx,
+	}
+
+	ch := make(chan *gpn.ProvingNetworkProverUpdate)
+	sub, err := e.client.WatchProverUpdate(opts, ch)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		<-ctx.Done()
+		sub.Unsubscribe()
+	}()
+
+	return ch, nil
 }
 
 func (e *Ethereum) SubmitValidationSignatures(ctx context.Context, request common.ProvingRequestMessage, signatures [][]byte) error {

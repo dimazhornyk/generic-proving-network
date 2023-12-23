@@ -28,13 +28,13 @@ type Service struct {
 	docker    *connectors.Docker
 	pubsub    *connectors.PubSub
 	host      host.Host
-	nodes     NodesMap
+	nodes     StatusMap
 	storage   *Storage
 	status    *StatusSharing
 	consumers []common.Consumer
 }
 
-func NewService(ctx context.Context, cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes NodesMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
+func NewService(ctx context.Context, cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes StatusMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
 	allConsumers, err := eth.GetAllConsumers(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting consumers from ethereum")

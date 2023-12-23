@@ -4,7 +4,10 @@ import (
 	"context"
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
 )
@@ -15,14 +18,16 @@ type Listener struct {
 	requestsHandler      *handlers.ProvingRequestsHandler
 	statusUpdatesHandler *handlers.StatusUpdatesHandler
 	proofsHandler        *handlers.ProofsHandler
+	networkParticipants  *logic.NetworkParticipants
 }
 
-func NewListener(pubsub *connectors.PubSub, vh *handlers.VotingHandler, rh *handlers.ProvingRequestsHandler, sh *handlers.StatusUpdatesHandler) *Listener {
+func NewListener(pubsub *connectors.PubSub, vh *handlers.VotingHandler, rh *handlers.ProvingRequestsHandler, sh *handlers.StatusUpdatesHandler, np *logic.NetworkParticipants) *Listener {
 	return &Listener{
 		pubsub:               pubsub,
 		votingHandler:        vh,
 		requestsHandler:      rh,
 		statusUpdatesHandler: sh,
+		networkParticipants:  np,
 	}
 }
 
@@ -74,6 +79,10 @@ func (l *Listener) ListenStateUpdates(ctx context.Context) error {
 			continue
 		}
 
+		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			continue
+		}
+
 		var msg common.StatusMessage
 		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling state update message", err)
@@ -96,6 +105,10 @@ func (l *Listener) ListenProvingRequests(ctx context.Context) error {
 		if err != nil {
 			slog.Error("error getting next message from subscription", err)
 
+			continue
+		}
+
+		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
 			continue
 		}
 
@@ -124,6 +137,10 @@ func (l *Listener) ListenProofs(ctx context.Context) error {
 			continue
 		}
 
+		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			continue
+		}
+
 		var msg common.ProofSubmissionMessage
 		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling voting message", err)
@@ -149,6 +166,10 @@ func (l *Listener) ListenVoting(ctx context.Context) error {
 			continue
 		}
 
+		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			continue
+		}
+
 		var msg common.VotingMessage
 		if err := common.GobDecodeMessage(pubsubMsg.Data, &msg); err != nil {
 			slog.Error("error unmarshalling voting message", err)
@@ -158,4 +179,21 @@ func (l *Listener) ListenVoting(ctx context.Context) error {
 
 		go l.votingHandler.Handle(ctx, pubsubMsg.ReceivedFrom, msg)
 	}
+}
+
+func (l *Listener) isNetworkParticipant(peerID peer.ID) bool {
+	addr, err := common.PeerIDToEthAddress(peerID)
+	if err != nil {
+		slog.Error("error converting peer ID to ethereum address", err)
+
+		return false
+	}
+
+	if !l.networkParticipants.IsNetworkParticipant(ethcommon.HexToAddress(addr)) {
+		slog.Error("error: peer is not a network participant", err)
+
+		return false
+	}
+
+	return true
 }

@@ -1,32 +1,5 @@
 [
 	{
-		"inputs": [],
-		"name": "depositEth",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_containerName",
-				"type": "string"
-			}
-		],
-		"name": "registerConsumer",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "registerProver",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -43,43 +16,48 @@
 		"type": "error"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "requestId",
-				"type": "string"
+				"indexed": false,
+				"internalType": "address",
+				"name": "addr",
+				"type": "address"
 			},
 			{
-				"internalType": "uint256",
-				"name": "reward",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes32[]",
-				"name": "rs",
-				"type": "bytes32[]"
-			},
-			{
-				"internalType": "bytes32[]",
-				"name": "ss",
-				"type": "bytes32[]"
-			},
-			{
-				"internalType": "uint8[]",
-				"name": "vs",
-				"type": "uint8[]"
+				"indexed": false,
+				"internalType": "bool",
+				"name": "isAdded",
+				"type": "bool"
 			}
 		],
-		"name": "submitSignedProof",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "ProverUpdate",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "MIN_ETH_AMOUNT_CONSUMER",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
 		"inputs": [],
-		"name": "withdrawConsumer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "MIN_ETH_AMOUNT_PROVER",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -127,6 +105,13 @@
 	},
 	{
 		"inputs": [],
+		"name": "depositEth",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "getConsumers",
 		"outputs": [
 			{
@@ -160,47 +145,9 @@
 		"name": "getProvers",
 		"outputs": [
 			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "addr",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "balance",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct Network.ProverView[]",
+				"internalType": "address[]",
 				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MIN_ETH_AMOUNT_CONSUMER",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "MIN_ETH_AMOUNT_PROVER",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
+				"type": "address[]"
 			}
 		],
 		"stateMutability": "view",
@@ -285,6 +232,80 @@
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_containerName",
+				"type": "string"
+			}
+		],
+		"name": "registerConsumer",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "registerProver",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "requestId",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "reward",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "rs",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "bytes32[]",
+				"name": "ss",
+				"type": "bytes32[]"
+			},
+			{
+				"internalType": "uint8[]",
+				"name": "vs",
+				"type": "uint8[]"
+			}
+		],
+		"name": "submitSignedProof",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawConsumer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawProver",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdrawRewards",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]
