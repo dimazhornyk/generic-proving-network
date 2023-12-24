@@ -80,6 +80,8 @@ func (l *Listener) ListenStateUpdates(ctx context.Context) error {
 		}
 
 		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			slog.Info("received message from non-network participant", slog.String("peer", pubsubMsg.ReceivedFrom.String()))
+
 			continue
 		}
 
@@ -109,6 +111,8 @@ func (l *Listener) ListenProvingRequests(ctx context.Context) error {
 		}
 
 		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			slog.Info("received message from non-network participant", slog.String("peer", pubsubMsg.ReceivedFrom.String()))
+
 			continue
 		}
 
@@ -138,6 +142,8 @@ func (l *Listener) ListenProofs(ctx context.Context) error {
 		}
 
 		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			slog.Info("received message from non-network participant", slog.String("peer", pubsubMsg.ReceivedFrom.String()))
+
 			continue
 		}
 
@@ -167,6 +173,8 @@ func (l *Listener) ListenVoting(ctx context.Context) error {
 		}
 
 		if !l.isNetworkParticipant(pubsubMsg.ReceivedFrom) {
+			slog.Info("received message from non-network participant", slog.String("peer", pubsubMsg.ReceivedFrom.String()))
+
 			continue
 		}
 
