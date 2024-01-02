@@ -1,19 +1,19 @@
 package logic
 
 import (
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"multi-proving-client/internal/common"
 	"time"
 )
 
-type NodesMap map[peer.ID]common.NodeData
+type StatusMap map[peer.ID]common.NodeData
 
-func NewNodesMap() NodesMap {
-	return make(NodesMap)
+func NewStatusMap() StatusMap {
+	return make(StatusMap)
 }
 
-func (m NodesMap) Add(peerID peer.ID, status common.Status, commitments []string) {
+func (m StatusMap) Add(peerID peer.ID, status common.Status, commitments []string) {
 	m[peerID] = common.NodeData{
 		PeerID:         peerID,
 		Status:         status,
@@ -22,7 +22,7 @@ func (m NodesMap) Add(peerID peer.ID, status common.Status, commitments []string
 	}
 }
 
-func (m NodesMap) UpdateStatus(peerID peer.ID, status common.Status) error {
+func (m StatusMap) UpdateStatus(peerID peer.ID, status common.Status) error {
 	node, ok := m[peerID]
 	if !ok {
 		return errors.New("unknown peerID")

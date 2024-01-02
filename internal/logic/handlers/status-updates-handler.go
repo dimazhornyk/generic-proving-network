@@ -1,23 +1,26 @@
-package logic
+package handlers
 
 import (
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
 )
 
 type StatusUpdatesHandler struct {
-	nodes NodesMap
+	nodes logic.StatusMap
 }
 
-func NewStatusUpdatesHandler(nodes NodesMap) *StatusUpdatesHandler {
+func NewStatusUpdatesHandler(nodes logic.StatusMap) *StatusUpdatesHandler {
 	return &StatusUpdatesHandler{
 		nodes: nodes,
 	}
 }
 
 func (h *StatusUpdatesHandler) Handle(peerID peer.ID, msg common.StatusMessage) {
+	slog.Info("handling status message", slog.String("status", msg.Status.String()), slog.String("peerID", peerID.String()))
+
 	var err error
 	switch msg.Status {
 	case common.StatusInit:

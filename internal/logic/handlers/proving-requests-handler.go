@@ -1,33 +1,50 @@
-package logic
+package handlers
 
 import (
-	"github.com/libp2p/go-libp2p/core/peer"
+	"context"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
+	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
+	"github.com/dimazhornyk/generic-proving-network/internal/logic"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
 	"time"
 )
 
 type ProvingRequestsHandler struct {
-	state *State
+	host    host.Host
+	storage *logic.Storage
+	service *logic.Service
+	pubsub  *connectors.PubSub
 }
 
-func NewProvingRequestsHandler(state *State) *ProvingRequestsHandler {
+func NewProvingRequestsHandler(host host.Host, storage *logic.Storage, service *logic.Service, pubsub *connectors.PubSub) *ProvingRequestsHandler {
 	return &ProvingRequestsHandler{
-		state: state,
+		host:    host,
+		storage: storage,
+		service: service,
+		pubsub:  pubsub,
 	}
 }
 
-func (h *ProvingRequestsHandler) Handle(peerID peer.ID, msg common.ProvingRequestMessage) {
+func (h *ProvingRequestsHandler) Handle(ctx context.Context, msg common.ProvingRequestMessage) {
 	if err := validateProvingRequest(msg); err != nil {
 		// TODO: if it is invalid - take punishing actions
-		slog.Error("invalid proving request", err)
+		slog.Error("invalid proving request", slog.String("err", err.Error()))
 
 		return
 	}
 
-	if err := h.state.SaveRequest(msg); err != nil {
-		slog.Error("error saving proving request", err)
+	if err := h.storage.SaveRequest(msg); err != nil {
+		slog.Error("error saving proving request", slog.String("err", err.Error()))
+
+		return
+	}
+
+	if err := h.service.HandleProverSelection(ctx, msg); err != nil {
+		slog.Error("error handling prover selection", slog.String("err", err.Error()))
+
+		return
 	}
 }
 

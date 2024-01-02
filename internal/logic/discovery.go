@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/libp2p/go-libp2p-kad-dht"
 	"github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -11,26 +12,25 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/discovery/util"
 	"github.com/pkg/errors"
 	"log/slog"
-	"multi-proving-client/internal/common"
 )
 
-const connectivityFactor = 3
+const connectivityFactor = 5
 
 type Discovery struct {
 	host        host.Host
 	dht         *dht.IpfsDHT
 	namespace   string
 	protocolID  core.ProtocolID
-	connections ConnectionMap
+	connections *ConnectionHolder
 }
 
-func NewDiscovery(host host.Host, dht *dht.IpfsDHT, cfg common.Config) *Discovery {
+func NewDiscovery(host host.Host, dht *dht.IpfsDHT, cfg *common.Config, connectionMap *ConnectionHolder) *Discovery {
 	return &Discovery{
 		host:        host,
 		dht:         dht,
 		namespace:   cfg.Namespace,
 		protocolID:  cfg.ProtocolID,
-		connections: NewConnectionMap(),
+		connections: connectionMap,
 	}
 }
 
@@ -59,13 +59,13 @@ func (d *Discovery) listen(ctx context.Context, ch <-chan peer.AddrInfo) {
 			}
 
 			slog.Info("Found peer", slog.String("peerID", p.ID.String()))
-			if d.host.Network().Connectedness(p.ID) != network.Connected && len(d.connections) < connectivityFactor {
+			if d.host.Network().Connectedness(p.ID) != network.Connected && d.connections.Len() < connectivityFactor {
 				conn, err := d.host.Network().DialPeer(ctx, p.ID)
 				if err != nil {
 					slog.Error("error on dialing peer", err, slog.String("peerID", p.ID.String()))
 					continue
 				}
-				slog.Info("Connected to:", p.ID.String())
+				slog.Info("Connected to peer", slog.String("peerID", p.ID.String()))
 
 				d.connections.Add(conn)
 			}
