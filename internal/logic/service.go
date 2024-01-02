@@ -174,7 +174,6 @@ func (s *Service) voteProverSelection(ctx context.Context, requestID common.Requ
 func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
-		fmt.Println("NODE ID", node.PeerID, "COMMITMENTS", node.Commitments, "STATUS", node.Status, "AVAILABLE SINCE", node.AvailableSince, "REQUEST TIMESTAMP", requestTimestamp, "CONSUMER_NAME", consumerName)
 		// is committed to the consumer, is idle, went up earlier than request was sent, is not in the exclude list
 		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) && !slices.Contains(excludeList, node.PeerID) {
 			nodes = append(nodes, node)

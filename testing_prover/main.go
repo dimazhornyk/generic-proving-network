@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	http.Handle("/prove", http.HandlerFunc(proveHandler))
 	http.Handle("/validate", http.HandlerFunc(validateHandler))
 
-	fmt.Println("starting a server on :3000")
+	slog.Info("starting a server on :3000")
 	if err := http.ListenAndServe(":3000", nil); err != nil {
 		panic(err)
 	}
