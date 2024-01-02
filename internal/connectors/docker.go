@@ -12,11 +12,15 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"slices"
+	"strconv"
 )
+
+const privatePort = 3000
 
 type Docker struct {
 	client     *client.Client
-	containers map[string]common.Container
+	usedImages []string
 }
 
 func NewDocker() (*Docker, error) {
@@ -27,7 +31,7 @@ func NewDocker() (*Docker, error) {
 
 	return &Docker{
 		client:     c,
-		containers: make(map[string]common.Container),
+		usedImages: make([]string, 0),
 	}, nil
 }
 
@@ -64,19 +68,37 @@ func (d Docker) HasImage(image string) (bool, error) {
 }
 
 func (d Docker) GetContainerPort(image string) (string, error) {
-	if c, ok := d.containers[image]; ok {
-		return c.SourcePort, nil
+	containers, err := d.client.ContainerList(context.Background(), types.ContainerListOptions{All: true})
+	if err != nil {
+		return "", errors.Wrap(err, "error getting a list of containers")
+	}
+
+	for _, c := range containers {
+		if c.Image == image {
+			for _, port := range c.Ports {
+				if port.PrivatePort == privatePort {
+					return strconv.Itoa(int(port.PublicPort)), nil
+				}
+			}
+		}
 	}
 
 	return "", errors.Errorf("container with image %s is not started", image)
 }
 
 func (d Docker) StartContainers(images []string) error {
-	for _, image := range images {
-		if _, ok := d.containers[image]; ok {
-			slog.Warn("container is already started", slog.String("image", image))
+	containers, err := d.client.ContainerList(context.Background(), types.ContainerListOptions{All: true})
+	if err != nil {
+		return errors.Wrap(err, "error getting a list of containers")
+	}
 
-			continue
+	for _, image := range images {
+		for _, c := range containers {
+			if c.Image == image {
+				slog.Warn("container is already started", slog.String("image", image))
+
+				continue
+			}
 		}
 
 		slog.Info("pulling an image", slog.String("image", image))
@@ -90,7 +112,7 @@ func (d Docker) StartContainers(images []string) error {
 		}
 
 		slog.Info("container is started", slog.String("id", c.ID), slog.String("image", image))
-		d.containers[image] = c // TODO: kill containers on graceful shutdown
+		d.usedImages = append(d.usedImages, image)
 	}
 
 	return nil
@@ -107,7 +129,7 @@ func (d Docker) CreateNewContainer(image string) (common.Container, error) {
 		HostPort: port,
 	}
 
-	containerPort, err := nat.NewPort("tcp", "3000")
+	containerPort, err := nat.NewPort("tcp", strconv.Itoa(privatePort))
 	if err != nil {
 		return common.Container{}, errors.Wrap(err, "error creating a container port")
 	}
@@ -141,12 +163,19 @@ func (d Docker) CreateNewContainer(image string) (common.Container, error) {
 func (d Docker) StopContainers() error {
 	eg := errgroup.Group{}
 
-	for _, c := range d.containers {
-		cont := c
+	containers, err := d.client.ContainerList(context.Background(), types.ContainerListOptions{All: true})
+	if err != nil {
+		return errors.Wrap(err, "error getting a list of containers")
+	}
 
-		eg.Go(func() error {
-			return d.client.ContainerStop(context.Background(), cont.ID, container.StopOptions{})
-		})
+	for _, c := range containers {
+		if slices.Contains(d.usedImages, c.Image) {
+			id := c.ID
+
+			eg.Go(func() error {
+				return d.client.ContainerStop(context.Background(), id, container.StopOptions{})
+			})
+		}
 	}
 
 	return errors.Wrap(eg.Wait(), "error stopping containers")

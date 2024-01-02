@@ -7,6 +7,7 @@ import (
 	"github.com/dimazhornyk/generic-proving-network/internal/logic"
 	"github.com/dimazhornyk/generic-proving-network/internal/logic/handlers"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"log/slog"
@@ -19,19 +20,21 @@ type Listener struct {
 	statusUpdatesHandler *handlers.StatusUpdatesHandler
 	proofsHandler        *handlers.ProofsHandler
 	networkParticipants  *logic.NetworkParticipants
+	hostID               peer.ID
 }
 
-func NewListener(pubsub *connectors.PubSub, vh *handlers.VotingHandler, rh *handlers.ProvingRequestsHandler, sh *handlers.StatusUpdatesHandler, np *logic.NetworkParticipants) *Listener {
+func NewListener(pubsub *connectors.PubSub, vh *handlers.VotingHandler, rh *handlers.ProvingRequestsHandler, sh *handlers.StatusUpdatesHandler, np *logic.NetworkParticipants, host host.Host) *Listener {
 	return &Listener{
 		pubsub:               pubsub,
 		votingHandler:        vh,
 		requestsHandler:      rh,
 		statusUpdatesHandler: sh,
 		networkParticipants:  np,
+		hostID:               host.ID(),
 	}
 }
 
-func (l *Listener) Listen(ctx context.Context) error {
+func (l *Listener) Listen(ctx context.Context) {
 	funcs := []func(context.Context) error{
 		l.ListenStateUpdates,
 		l.ListenProvingRequests,
@@ -51,14 +54,14 @@ func (l *Listener) Listen(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case err := <-errs:
 			if err != nil {
-				return err
+				panic(err)
 			} else {
 				cnt++
 				if cnt == len(funcs) {
-					return nil
+					return
 				}
 			}
 		}

@@ -27,16 +27,15 @@ func NewStorage() *Storage {
 	}
 }
 
-func (s *Storage) GetLatestProof(consumerName string) (common.ZKProof, error) {
+func (s *Storage) GetLatestProof(consumerName string) *common.ZKProof {
 	s.mu.RLock()
-	proof, ok := s.latestProofs[consumerName]
-	s.mu.RUnlock()
+	defer s.mu.RUnlock()
 
-	if ok {
-		return proof, nil
+	if proof, ok := s.latestProofs[consumerName]; ok {
+		return &proof
 	}
 
-	return common.ZKProof{}, errors.New("unknown consumer")
+	return nil
 }
 
 func (s *Storage) GetProvingRequestByID(requestID common.RequestID) (common.RequestExtension, error) {

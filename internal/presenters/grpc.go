@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"log/slog"
 )
 
 type API struct {
@@ -25,7 +26,13 @@ func NewAPI(service *logic.Service) *API {
 func (a *API) ComputeProof(ctx context.Context, req *proto.ComputeProofRequest) (*emptypb.Empty, error) {
 	r := toCommonRequest(req)
 
-	return &emptypb.Empty{}, a.service.InitiateProofCalculation(ctx, r)
+	if err := a.service.InitiateProofCalculation(ctx, r); err != nil {
+		slog.Error("error initiating proof calculation: ", slog.String("err", err.Error()))
+
+		return &emptypb.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (a *API) GetProof(_ context.Context, req *proto.GetProofRequest) (*proto.GetProofResponse, error) {

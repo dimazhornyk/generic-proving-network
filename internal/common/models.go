@@ -6,6 +6,8 @@ import (
 	"math/big"
 )
 
+const TestingMode = "testing"
+
 type ComputeProofRequest struct {
 	ID              string
 	ConsumerName    string

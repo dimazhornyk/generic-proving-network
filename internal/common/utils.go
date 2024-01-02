@@ -12,7 +12,8 @@ import (
 	"net"
 )
 
-func ZKPToRandom(zkProof []byte) (*rand.Rand, error) {
+// BytesToRandom converts a byte slice to a random number generator
+func BytesToRandom(zkProof []byte) (*rand.Rand, error) {
 	hash := sha256.New()
 	hash.Write(zkProof)
 	sha := hash.Sum(nil)

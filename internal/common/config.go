@@ -7,13 +7,15 @@ import (
 )
 
 type Config struct {
-	ProtocolID      core.ProtocolID `env:"PROTOCOL_ID" envDefault:"/p2p/gpc-node/1.0.0"`
-	SyncProtocolID  core.ProtocolID `env:"SYNC_PROTOCOL_ID" envDefault:"/p2p/gpc-sync/1.0.0"`
+	EthereumAPI     string          `env:"ETHEREUM_API,required"`
+	ProtocolID      core.ProtocolID `env:"PROTOCOL_ID" envDefault:"/p2p/gpn-node-te/1.0.0"`
+	SyncProtocolID  core.ProtocolID `env:"SYNC_PROTOCOL_ID" envDefault:"/p2p/gpn-sync/1.0.0"`
 	Namespace       string          `env:"NAMESPACE" envDefault:"mpc-pubsub"`
-	PrivateKeyPath  string          `env:"PRIVATE_KEY_PATH" envDefault:"/app/keys/priv.key"`
-	ContractAddress string          `env:"CONTRACT_ADDRESS" envDefault:"0x1E0447b19BB6EcFdAe1e4AE1694b0C3659614e4e"`
+	PrivateKeyPath  string          `env:"PRIVATE_KEY_PATH" envDefault:"priv.key"`
+	ContractAddress string          `env:"CONTRACT_ADDRESS" envDefault:"0x5510E82f2A7f0B1397Ef60FE1751DCB722C66ED9"`
 	Port            string          `env:"PORT" envDefault:"0"`
 	Consumers       []string        `env:"CONSUMERS" envDefault:"matterlabs/prover,scroll-tech/scroll-prover"`
+	Mode            string          `env:"MODE" envDefault:"production"`
 }
 
 func NewConfig() (*Config, error) {

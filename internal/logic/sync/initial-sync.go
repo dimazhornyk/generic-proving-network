@@ -36,7 +36,7 @@ func NewInitialSyncer(cfg *common.Config, connections *logic.ConnectionHolder, s
 		host:        host,
 		storage:     storage,
 		connections: connections,
-		protocolID:  cfg.ProtocolID,
+		protocolID:  cfg.SyncProtocolID,
 	}
 }
 
@@ -66,6 +66,8 @@ outer:
 
 	peers := is.connections.GetPeerIDs()
 	for _, p := range peers {
+		slog.Info("syncing with a peer", slog.String("peerID", p.String()))
+
 		if err := is.syncStorage(ctx, p); err != nil {
 			slog.Error("error on syncing storage", slog.String("peerID", p.String()), slog.String("error", err.Error()))
 

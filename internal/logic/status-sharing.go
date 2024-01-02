@@ -5,12 +5,14 @@ import (
 	"github.com/dimazhornyk/generic-proving-network/internal/common"
 	"github.com/dimazhornyk/generic-proving-network/internal/connectors"
 	"log/slog"
+	"sync"
 	"time"
 )
 
 type StatusSharing struct {
 	pubsub *connectors.PubSub
 	status common.Status
+	mu     sync.Mutex
 }
 
 func NewGlobalMessaging(pubsub *connectors.PubSub) (*StatusSharing, error) {
@@ -36,25 +38,34 @@ func (s *StatusSharing) Init(ctx context.Context, consumers []string) error {
 }
 
 func (s *StatusSharing) SetStatus(ctx context.Context, status common.Status) {
+	s.mu.Lock()
 	s.status = status
+	s.mu.Unlock()
+
 	s.shareStatus(ctx)
 }
 
 func (s *StatusSharing) worker(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * 5)
 
-	select {
-	case <-ctx.Done():
-		s.SetStatus(context.Background(), common.StatusShuttingDown)
-		return
-	case <-ticker.C:
-		s.shareStatus(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			s.SetStatus(context.Background(), common.StatusShuttingDown)
+			return
+		case <-ticker.C:
+			s.shareStatus(ctx)
+		}
 	}
 }
 
 func (s *StatusSharing) shareStatus(ctx context.Context) {
+	s.mu.Lock()
+	status := s.status
+	s.mu.Unlock()
+
 	payload := common.StatusMessage{
-		Status: s.status,
+		Status: status,
 	}
 
 	if err := s.pubsub.SendStatusMessage(ctx, payload); err != nil {

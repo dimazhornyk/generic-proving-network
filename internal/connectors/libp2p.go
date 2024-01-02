@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/pkg/errors"
+	"log/slog"
 	"os"
 	"strings"
 )
@@ -42,12 +43,7 @@ func NewHost(cfg *common.Config, privECDSA *ecdsa.PrivateKey) (host.Host, error)
 		return nil, errors.Wrap(err, "error creating a new host")
 	}
 
-	// fmt.Printf("host ID %s\n", host.ID().String())
-	// fmt.Printf("following are the assigned addresses\n")
-	// for _, addr := range host.Addrs() {
-	// 	fmt.Printf("%s\n", addr.String())
-	// }
-	// fmt.Printf("\n")
+	slog.Info("libp2p host created", slog.String("hostID", h.ID().String()))
 
 	return h, nil
 }

@@ -34,15 +34,24 @@ type Service struct {
 	consumers []common.Consumer
 }
 
-func NewService(ctx context.Context, cfg common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes StatusMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
-	allConsumers, err := eth.GetAllConsumers(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting consumers from ethereum")
-	}
+func NewService(ctx context.Context, cfg *common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes StatusMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
+	var consumers []common.Consumer
 
-	consumers := common.Filter(allConsumers, func(consumer common.Consumer) bool {
-		return slices.Contains(cfg.Consumers, consumer.Name)
-	})
+	if cfg.Mode == common.TestingMode {
+		consumers = []common.Consumer{{
+			Name:  cfg.Consumers[0],
+			Image: cfg.Consumers[0],
+		}}
+	} else {
+		allConsumers, err := eth.GetAllConsumers(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting consumers from ethereum")
+		}
+
+		consumers = common.Filter(allConsumers, func(consumer common.Consumer) bool {
+			return slices.Contains(cfg.Consumers, consumer.Name)
+		})
+	}
 
 	if len(consumers) == 0 {
 		return nil, errors.New("no consumers found")
@@ -81,6 +90,8 @@ func (s *Service) InitiateProofCalculation(ctx context.Context, req common.Compu
 		Timestamp:       time.Now().UnixNano(),
 	}
 
+	// todo: check that consumer is in a list in contract, verify signature
+	slog.Info("new request", slog.String("requestID", req.ID), slog.String("consumer", req.ConsumerName))
 	if err := s.pubsub.Publish(ctx, common.RequestsTopic, msg); err != nil {
 		return errors.Wrap(err, "error publishing the proving request")
 	}
@@ -163,6 +174,7 @@ func (s *Service) voteProverSelection(ctx context.Context, requestID common.Requ
 func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
+		fmt.Println("NODE ID", node.PeerID, "COMMITMENTS", node.Commitments, "STATUS", node.Status, "AVAILABLE SINCE", node.AvailableSince, "REQUEST TIMESTAMP", requestTimestamp, "CONSUMER_NAME", consumerName)
 		// is committed to the consumer, is idle, went up earlier than request was sent, is not in the exclude list
 		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) && !slices.Contains(excludeList, node.PeerID) {
 			nodes = append(nodes, node)
@@ -172,12 +184,15 @@ func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64,
 		return cmp.Compare(a.PeerID.String(), b.PeerID.String())
 	})
 
-	latestProof, err := s.storage.GetLatestProof(consumerName)
-	if err != nil {
-		return "", errors.Wrap(err, "error getting latest proof")
+	var seed []byte
+	latestProof := s.storage.GetLatestProof(consumerName)
+	if latestProof == nil {
+		seed = []byte(consumerName)
+	} else {
+		seed = latestProof.Proof
 	}
 
-	random, err := common.ZKPToRandom(latestProof.Proof)
+	random, err := common.BytesToRandom(seed)
 	if err != nil {
 		return "", errors.Wrap(err, "error getting random from last proof")
 	}

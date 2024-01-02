@@ -19,6 +19,8 @@ func NewStatusUpdatesHandler(nodes logic.StatusMap) *StatusUpdatesHandler {
 }
 
 func (h *StatusUpdatesHandler) Handle(peerID peer.ID, msg common.StatusMessage) {
+	slog.Info("handling status message", slog.String("status", msg.Status.String()), slog.String("peerID", peerID.String()))
+
 	var err error
 	switch msg.Status {
 	case common.StatusInit:

@@ -24,7 +24,7 @@ type Discovery struct {
 	connections *ConnectionHolder
 }
 
-func NewDiscovery(host host.Host, dht *dht.IpfsDHT, cfg common.Config, connectionMap *ConnectionHolder) *Discovery {
+func NewDiscovery(host host.Host, dht *dht.IpfsDHT, cfg *common.Config, connectionMap *ConnectionHolder) *Discovery {
 	return &Discovery{
 		host:        host,
 		dht:         dht,

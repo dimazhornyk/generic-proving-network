@@ -21,7 +21,7 @@ type Ethereum struct {
 }
 
 func NewEthereum(cfg *common.Config, privateKey *ecdsa.PrivateKey) (*Ethereum, error) {
-	ethClient, err := ethclient.Dial("https://sepolia.infura.io/v3/8c2d91ab6e0d476f9ea87f5e19ea6fb7")
+	ethClient, err := ethclient.Dial(cfg.EthereumAPI)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (e *Ethereum) SubmitValidationSignatures(ctx context.Context, request commo
 		}
 	}
 
-	tx, err := e.client.SubmitSignedProof(opts, request.ID, &request.Reward, rs, ss, vs)
+	tx, err := e.client.SubmitSignedProof(opts, request.ID, request.Reward, rs, ss, vs)
 	if err != nil {
 		return errors.Wrap(err, "error submitting signed proof")
 	}
