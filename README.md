@@ -7,6 +7,8 @@ This is an implementation of the generic proving network, designed to improve cu
 - Increasing censorship resistance
 - Making running a prover more economically viable
 
+> **_NOTE:_**  The project is still under development and not yet ready for production usage. It requires additional refining, testing, and auditing.
+
 ## How it works
 
 The general idea is to have a network of provers, that can be used by any consumer. The consumer can be a rollup, a
