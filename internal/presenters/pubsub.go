@@ -200,7 +200,7 @@ func (l *Listener) isNetworkParticipant(peerID peer.ID) bool {
 		return false
 	}
 
-	if !l.networkParticipants.IsNetworkParticipant(ethcommon.HexToAddress(addr)) {
+	if !l.networkParticipants.IsKnownProver(ethcommon.HexToAddress(addr)) {
 		slog.Error("error: peer is not a network participant", err)
 
 		return false

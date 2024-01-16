@@ -25,31 +25,27 @@ const validateURL = "http://localhost:%s/validate"
 var ErrNoProof = errors.New("no proof found")
 
 type Service struct {
-	docker    *connectors.Docker
-	pubsub    *connectors.PubSub
-	host      host.Host
-	nodes     StatusMap
-	storage   *Storage
-	status    *StatusSharing
-	consumers []common.Consumer
+	docker              *connectors.Docker
+	pubsub              *connectors.PubSub
+	host                host.Host
+	nodes               StatusMap
+	storage             *Storage
+	status              *StatusSharing
+	consumers           []common.Consumer
+	networkParticipants *NetworkParticipants
 }
 
-func NewService(ctx context.Context, cfg *common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes StatusMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum) (*Service, error) {
+func NewService(cfg *common.Config, d *connectors.Docker, pubsub *connectors.PubSub, nodes StatusMap, storage *Storage, status *StatusSharing, host host.Host, eth *connectors.Ethereum, np *NetworkParticipants) (*Service, error) {
 	var consumers []common.Consumer
 
 	if cfg.Mode == common.TestingMode {
 		consumers = []common.Consumer{{
-			Name:  cfg.Consumers[0],
 			Image: cfg.Consumers[0],
 		}}
 	} else {
-		allConsumers, err := eth.GetAllConsumers(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "error getting consumers from ethereum")
-		}
-
-		consumers = common.Filter(allConsumers, func(consumer common.Consumer) bool {
-			return slices.Contains(cfg.Consumers, consumer.Name)
+		registeredConsumers := np.GetAllConsumers()
+		consumers = common.Filter(registeredConsumers, func(consumer common.Consumer) bool {
+			return slices.Contains(cfg.Consumers, consumer.Image)
 		})
 	}
 
@@ -58,13 +54,14 @@ func NewService(ctx context.Context, cfg *common.Config, d *connectors.Docker, p
 	}
 
 	return &Service{
-		docker:    d,
-		pubsub:    pubsub,
-		nodes:     nodes,
-		storage:   storage,
-		status:    status,
-		host:      host,
-		consumers: consumers,
+		docker:              d,
+		pubsub:              pubsub,
+		nodes:               nodes,
+		storage:             storage,
+		status:              status,
+		host:                host,
+		consumers:           consumers,
+		networkParticipants: np,
 	}, nil
 }
 
@@ -83,7 +80,7 @@ func (s *Service) Start() error {
 func (s *Service) InitiateProofCalculation(ctx context.Context, req common.ComputeProofRequest) error {
 	msg := common.ProvingRequestMessage{
 		ID:              req.ID,
-		ConsumerName:    req.ConsumerName,
+		ConsumerImage:   req.ConsumerImage,
 		ConsumerAddress: req.ConsumerAddress,
 		Signature:       req.Signature,
 		Data:            req.Data,
@@ -91,7 +88,7 @@ func (s *Service) InitiateProofCalculation(ctx context.Context, req common.Compu
 	}
 
 	// todo: check that consumer is in a list in contract, verify signature
-	slog.Info("new request", slog.String("requestID", req.ID), slog.String("consumer", req.ConsumerName))
+	slog.Info("new request", slog.String("requestID", req.ID), slog.String("consumerImage", req.ConsumerImage))
 	if err := s.pubsub.Publish(ctx, common.RequestsTopic, msg); err != nil {
 		return errors.Wrap(err, "error publishing the proving request")
 	}
@@ -111,7 +108,7 @@ func (s *Service) GetProof(requestID common.RequestID) (common.ZKProof, error) {
 }
 
 func (s *Service) HandleProverSelection(ctx context.Context, msg common.ProvingRequestMessage, excludedPeers ...peer.ID) error {
-	proverID, err := s.selectProvingNode(msg.ConsumerName, msg.Timestamp, excludedPeers...)
+	proverID, err := s.selectProvingNode(msg.ConsumerImage, msg.Timestamp, excludedPeers...)
 	if err != nil {
 		return errors.Wrap(err, "error selecting prover")
 	}
@@ -171,11 +168,11 @@ func (s *Service) voteProverSelection(ctx context.Context, requestID common.Requ
 	return nil
 }
 
-func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
+func (s *Service) selectProvingNode(consumerImage string, requestTimestamp int64, excludeList ...peer.ID) (peer.ID, error) {
 	nodes := make([]common.NodeData, 0)
 	for _, node := range s.nodes {
 		// is committed to the consumer, is idle, went up earlier than request was sent, is not in the exclude list
-		if slices.Contains(node.Commitments, consumerName) && isNodeAppropriate(node, requestTimestamp) && !slices.Contains(excludeList, node.PeerID) {
+		if slices.Contains(node.Commitments, consumerImage) && isNodeAppropriate(node, requestTimestamp) && !slices.Contains(excludeList, node.PeerID) {
 			nodes = append(nodes, node)
 		}
 	}
@@ -184,9 +181,9 @@ func (s *Service) selectProvingNode(consumerName string, requestTimestamp int64,
 	})
 
 	var seed []byte
-	latestProof := s.storage.GetLatestProof(consumerName)
+	latestProof := s.storage.GetLatestProof(consumerImage)
 	if latestProof == nil {
-		seed = []byte(consumerName)
+		seed = []byte(consumerImage)
 	} else {
 		seed = latestProof.Proof
 	}
@@ -205,12 +202,11 @@ func (s *Service) computeProof(ctx context.Context, req common.ProvingRequestMes
 	s.status.SetStatus(ctx, common.StatusProving)
 	defer s.status.SetStatus(ctx, common.StatusIdle)
 
-	image := s.getConsumerImage(req.ConsumerName)
-	if image == "" {
+	if req.ConsumerImage == "" {
 		return nil, errors.New("unknown consumer")
 	}
 
-	port, err := s.docker.GetContainerPort(image)
+	port, err := s.docker.GetContainerPort(req.ConsumerImage)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting container ID")
 	}
@@ -242,13 +238,12 @@ func (s *Service) computeProof(ctx context.Context, req common.ProvingRequestMes
 	return response.Proof, nil
 }
 
-func (s *Service) ValidateProof(requestID common.RequestID, consumer string, data, proof []byte) (bool, error) {
-	image := s.getConsumerImage(consumer)
-	if image == "" {
+func (s *Service) ValidateProof(requestID common.RequestID, consumerImage string, data, proof []byte) (bool, error) {
+	if consumerImage == "" {
 		return false, errors.New("unknown consumer")
 	}
 
-	port, err := s.docker.GetContainerPort(image)
+	port, err := s.docker.GetContainerPort(consumerImage)
 	if err != nil {
 		return false, errors.Wrap(err, "error getting container ID")
 	}
@@ -279,16 +274,6 @@ func (s *Service) ValidateProof(requestID common.RequestID, consumer string, dat
 	}
 
 	return response.Valid, nil
-}
-
-func (s *Service) getConsumerImage(consumerName string) string {
-	for _, consumer := range s.consumers {
-		if consumer.Name == consumerName {
-			return consumer.Image
-		}
-	}
-
-	return ""
 }
 
 func isNodeAppropriate(node common.NodeData, maxTimestamp int64) bool {

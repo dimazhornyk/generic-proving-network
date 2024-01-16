@@ -53,8 +53,8 @@ func validateProvingRequest(msg common.ProvingRequestMessage) error {
 		return errors.New("requestID is empty")
 	}
 
-	if msg.ConsumerName == "" {
-		return errors.New("consumerName is empty")
+	if msg.ConsumerImage == "" {
+		return errors.New("consumerImage is empty")
 	}
 
 	if msg.ConsumerAddress == "" {
@@ -78,10 +78,10 @@ func validateProvingRequest(msg common.ProvingRequestMessage) error {
 		return errors.New("timestamp is too old")
 	}
 
-	return verifySignature(msg.ConsumerName, msg.Signature)
+	return verifySignature(msg.ConsumerImage, msg.Signature)
 }
 
-func verifySignature(consumerName string, signature []byte) error {
+func verifySignature(consumerImage string, signature []byte) error {
 	// TODO: implement
 	return nil
 }

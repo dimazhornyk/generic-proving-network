@@ -10,7 +10,7 @@ const TestingMode = "testing"
 
 type ComputeProofRequest struct {
 	ID              string
-	ConsumerName    string
+	ConsumerImage   string
 	ConsumerAddress string
 	Signature       []byte // signature has to be done of the requestID
 	Data            []byte
@@ -39,7 +39,6 @@ type Container struct {
 }
 
 type Consumer struct {
-	Name    string
 	Address ethcommon.Address
 	Balance *big.Int
 	Image   string

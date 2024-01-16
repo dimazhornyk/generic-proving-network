@@ -55,7 +55,7 @@ func (h *ProofsHandler) Handle(ctx context.Context, peerID peer.ID, msg common.P
 
 	// TODO: check if the node's status was Proving, so the state transition was correct
 
-	valid, err := h.service.ValidateProof(msg.RequestID, reqData.ConsumerName, reqData.Data, msg.Proof)
+	valid, err := h.service.ValidateProof(msg.RequestID, reqData.ConsumerImage, reqData.Data, msg.Proof)
 	if err != nil {
 		slog.Error("error validating proof", slog.String("err", err.Error()))
 

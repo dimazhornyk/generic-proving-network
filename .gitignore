@@ -4,3 +4,4 @@ node_modules
 contracts/cache
 contracts/typechain-types
 priv.key
+build-info

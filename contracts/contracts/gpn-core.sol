@@ -10,6 +10,7 @@ contract Network {
     uint256 private constant SECONDS_IN_DAY = 86400;
 
     event ProverUpdate(address addr, bool isAdded);
+    event ConsumerUpdate(address addr, bool isAdded);
 
     struct Consumer {
         uint256 balance;
@@ -63,6 +64,7 @@ contract Network {
 
         consumers[msg.sender] = Consumer(msg.value, _containerName);
         consumerAddresses.push(msg.sender);
+        emit ConsumerUpdate(msg.sender, true);
     }
 
     function depositEth() external payable willHaveEnoughEth {
@@ -77,6 +79,7 @@ contract Network {
         consumers[msg.sender] = Consumer(0, "");
 
         payable(msg.sender).transfer(balance);
+        emit ConsumerUpdate(msg.sender, false);
     }
 
     // registerProver requires a deposit from a prover to economically secure the network
@@ -90,6 +93,7 @@ contract Network {
         emit ProverUpdate(msg.sender, true);
     }
 
+    // withdrawal of just rewards on top of the base locked amount
     function withdrawRewards() external {
         require(provers[msg.sender].balance != 0);
 
@@ -99,6 +103,7 @@ contract Network {
         payable(msg.sender).transfer(withdrawalAmount);
     }
 
+    // full withdrawal
     function withdrawProver() external {
         require(provers[msg.sender].balance != 0);
 

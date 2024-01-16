@@ -27,7 +27,7 @@ type StatusMessage struct {
 type ProvingRequestMessage struct {
 	ID              RequestID `json:"request_id"`
 	Reward          *big.Int  `json:"reward"`
-	ConsumerName    string    `json:"consumer_name"`
+	ConsumerImage   string    `json:"consumer_image"`
 	ConsumerAddress string    `json:"consumer_address"`
 	Signature       []byte    `json:"signature"`
 	Data            []byte    `json:"data"`

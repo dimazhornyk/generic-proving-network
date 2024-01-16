@@ -55,7 +55,7 @@ func (a *API) GetProof(_ context.Context, req *proto.GetProofRequest) (*proto.Ge
 func toCommonRequest(req *proto.ComputeProofRequest) common.ComputeProofRequest {
 	return common.ComputeProofRequest{
 		ID:              req.GetRequestId(),
-		ConsumerName:    req.GetConsumerName(),
+		ConsumerImage:   req.GetConsumerImage(),
 		ConsumerAddress: req.GetConsumerAddress(),
 		Data:            req.GetData(),
 		Signature:       req.GetSignature(),

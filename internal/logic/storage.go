@@ -27,11 +27,11 @@ func NewStorage() *Storage {
 	}
 }
 
-func (s *Storage) GetLatestProof(consumerName string) *common.ZKProof {
+func (s *Storage) GetLatestProof(consumerImage string) *common.ZKProof {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if proof, ok := s.latestProofs[consumerName]; ok {
+	if proof, ok := s.latestProofs[consumerImage]; ok {
 		return &proof
 	}
 
@@ -136,7 +136,7 @@ func (s *Storage) DeleteProvingRequest(requestID common.RequestID) error {
 
 	s.mu.Lock()
 	s.resultsStorage[requestID] = proof
-	s.latestProofs[req.ConsumerName] = proof
+	s.latestProofs[req.ConsumerImage] = proof
 	delete(s.provingRequests, requestID)
 	s.mu.Unlock()
 

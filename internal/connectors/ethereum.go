@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 	"log/slog"
-	"strings"
 )
 
 type Ethereum struct {
@@ -56,7 +55,6 @@ func (e *Ethereum) GetAllConsumers(ctx context.Context) ([]common.Consumer, erro
 			Image:   consumer.ContainerName,
 			Address: consumer.Addr,
 			Balance: consumer.Balance,
-			Name:    strings.Split(consumer.ContainerName, ":")[0], // remove image tag
 		})
 	}
 
@@ -79,6 +77,25 @@ func (e *Ethereum) ListenForNewProvers(ctx context.Context) (<-chan *gpn.Proving
 
 	ch := make(chan *gpn.ProvingNetworkProverUpdate)
 	sub, err := e.client.WatchProverUpdate(opts, ch)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		<-ctx.Done()
+		sub.Unsubscribe()
+	}()
+
+	return ch, nil
+}
+
+func (e *Ethereum) ListenForNewConsumers(ctx context.Context) (<-chan *gpn.ProvingNetworkConsumerUpdate, error) {
+	opts := &bind.WatchOpts{
+		Context: ctx,
+	}
+
+	ch := make(chan *gpn.ProvingNetworkConsumerUpdate)
+	sub, err := e.client.WatchConsumerUpdate(opts, ch)
 	if err != nil {
 		return nil, err
 	}

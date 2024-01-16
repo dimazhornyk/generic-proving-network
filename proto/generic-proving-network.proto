@@ -14,7 +14,7 @@ service ProvingNetworkService {
 message ComputeProofRequest {
   string request_id = 1;
   string consumer_address = 2;
-  string consumer_name = 3;
+  string consumer_image = 3;
   bytes data = 4;
   bytes signature = 5; // signature should be done of the hash of this struct without signature
 }
